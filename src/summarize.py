@@ -25,17 +25,15 @@ def summarize_stock_news(stock_data):
     change = stock_data['change_percent']
     news = stock_data['news']
     
-    if not news:
-        return f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\nNo recent news available.\n"
-    
     # Build context for the LLM
-    news_text = ""
-    for i, article in enumerate(news, 1):
-        news_text += f"{i}. {article['title']} ({article['publisher']}, {article['published']})\n"
-        if article['summary']:
-            news_text += f"   {article['summary']}\n"
-    
-    prompt = f"""You are a financial analyst providing daily stock updates. Summarize the following information concisely and actionably.
+    if news:
+        news_text = ""
+        for i, article in enumerate(news, 1):
+            news_text += f"{i}. {article['title']} ({article['publisher']}, {article['published']})\n"
+            if article['summary']:
+                news_text += f"   {article['summary']}\n"
+        
+        prompt = f"""You are a financial analyst providing daily stock updates.
 
 Stock: {name} ({symbol})
 Current Price: ${price:.2f}
@@ -44,13 +42,31 @@ Change: {change:+.2f}%
 Recent News:
 {news_text}
 
-Provide a brief paragraph summary highlighting:
-1. Key developments or themes in the news
-2. Any notable price movement context
-3. What investors should know
-4. What the general sentiment shift has been around the stock
+Provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information. Focus on:
+1. The most important news developments
+2. How they relate to the price movement
+3. What investors should watch for
+4. What the sentiment is around the stock
+5. How its movement relates to the broader market
 
-Keep it concise, factual, and avoid speculation. Write in a professional but conversational tone."""
+Be concise, factual, and actionable. No fluff."""
+    else:
+        prompt = f"""You are a financial analyst providing daily stock updates.
+
+Stock: {name} ({symbol})
+Current Price: ${price:.2f}
+Change: {change:+.2f}%
+
+No news articles were published today for this stock.
+
+Provide a 2-3 sentence summary analyzing the stock's performance. DO NOT include any preamble. Start directly with analysis. Cover:
+1. The price movement and what it suggests
+2. Whether this aligns with broader market trends
+3. Any technical observations worth noting
+4. What the sentiment is around the stock
+5. How its movement relates to the broader market
+
+Be concise and factual. Mention that no news was available."""
 
     try:
         response = model.generate_content(prompt)
