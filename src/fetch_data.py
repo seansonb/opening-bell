@@ -1,7 +1,8 @@
 import yfinance as yf
 from datetime import datetime, timedelta
 import json
-import time
+from fetch_news import fetch_stock_news
+from fetch_earnings import fetch_earnings_data
 
 def load_watchlist(filepath='data/watchlist.json'):
     """Load stock symbols from watchlist file"""
@@ -16,10 +17,6 @@ def load_watchlist(filepath='data/watchlist.json'):
 def fetch_stock_data(symbol):
     """Fetch current price, change, and basic info for a stock"""
     try:
-        # Add delay to avoid rate limiting
-        time.sleep(2)
-        
-        # Let yfinance handle the session (it uses curl_cffi automatically)
         ticker = yf.Ticker(symbol)
         
         # Try using history for price data - most reliable
@@ -52,57 +49,8 @@ def fetch_stock_data(symbol):
         print(f"Error fetching data for {symbol}: {e}")
         return None
 
-def fetch_stock_news(symbol, days_back=1):
-    """Fetch recent news for a stock"""
-    try:
-        ticker = yf.Ticker(symbol)
-        news = ticker.news
-        
-        if not news:
-            return []
-        
-        cutoff_date = datetime.now() - timedelta(days=days_back)
-        recent_news = []
-        
-        for article in news:
-            # Handle potential None values
-            if not article:
-                continue
-                
-            content = article.get('content')
-            if not content:
-                continue
-            
-            # pubDate is in ISO format like '2025-11-18T16:00:39Z'
-            pub_date_str = content.get('pubDate', '')
-            
-            try:
-                # Parse ISO format date
-                pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
-                # Convert to local time (remove timezone info for comparison)
-                pub_date = pub_date.replace(tzinfo=None)
-            except:
-                pub_date = datetime.min
-            
-            if pub_date >= cutoff_date:
-                provider = content.get('provider') or {}
-                click_through = content.get('clickThroughUrl') or {}
-                
-                recent_news.append({
-                    'title': content.get('title', 'No title'),
-                    'publisher': provider.get('displayName', 'Unknown'),
-                    'link': click_through.get('url', ''),
-                    'published': pub_date.strftime('%Y-%m-%d %H:%M'),
-                    'summary': content.get('summary', '')
-                })
-        
-        return recent_news
-    except Exception as e:
-        print(f"Error fetching news for {symbol}: {e}")
-        return []
-
 def fetch_all_data(watchlist):
-    """Fetch data and news for all stocks in watchlist"""
+    """Fetch data, news, and earnings for all stocks in watchlist"""
     results = []
     
     for symbol in watchlist:
@@ -111,6 +59,7 @@ def fetch_all_data(watchlist):
         stock_data = fetch_stock_data(symbol)
         if stock_data:
             stock_data['news'] = fetch_stock_news(symbol)
+            stock_data['earnings'] = fetch_earnings_data(symbol)
             results.append(stock_data)
     
     return results
@@ -132,7 +81,6 @@ if __name__ == "__main__":
             print(f"Price: ${stock['current_price']:.2f}")
             if stock['change_percent']:
                 print(f"Change: {stock['change_percent']:.2f}%")
-            print(f"\nRecent News ({len(stock['news'])} articles):")
-            for article in stock['news'][:3]:  # Show first 3
-                print(f"  - {article['title']}")
-                print(f"    {article['publisher']} | {article['published']}")
+            print(f"\nRecent News ({len(stock['news'])} articles)")
+            if stock['earnings']:
+                print(f"Recent Earnings: {stock['earnings']['earnings_date']}")
