@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "name": "Sean",
+      "email": "spawn.of.sean@gmail.com",
+      "symbols": [
+        "AAPL",
+        "MSFT"
+      ]
+    }
+  ]
+}
