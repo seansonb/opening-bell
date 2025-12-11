@@ -39,7 +39,7 @@ def process_user(user):
     
     # Generate AI summaries
     print("🤖 Generating AI summaries...")
-    digest = generate_digest(stocks_data)
+    digest = generate_digest(stocks_data, user_name=name)
     print("✓ Digest generated")
     
     # Send email
@@ -61,9 +61,18 @@ def main():
     print("=" * 60)
     print()
     
+    # Check for test mode
+    test_mode = '--test' in sys.argv or '-t' in sys.argv
+    users_file = 'data/users_test.json' if test_mode else 'data/users.json'
+    
+    if test_mode:
+        print("🧪 Running in TEST MODE")
+        print(f"   Using {users_file}")
+        print()
+    
     # Load all users
     print("👥 Loading users...")
-    users = load_users()
+    users = load_users(filepath=users_file)
     
     if not users:
         print("❌ No users found in data/users.json")
@@ -100,6 +109,13 @@ def main():
         print(f"✅ All {total} digest(s) completed successfully!")
     else:
         print(f"⚠️  {successful}/{total} digest(s) sent successfully")
+    
+    # Show rate limit stats
+    from summarize import rate_limiter
+    stats = rate_limiter.get_stats()
+    print(f"\n📊 API Usage:")
+    print(f"   Requests today: {stats['requests_today']}/{stats['daily_limit']}")
+    print(f"   Last minute: {stats['requests_last_minute']}/{stats['per_minute_limit']}")
     
     print("=" * 60)
     

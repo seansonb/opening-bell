@@ -1,13 +1,20 @@
 import os
 from dotenv import load_dotenv
 import google.generativeai as genai
+from rate_limiter import RateLimiter
 
 # Load environment variables
 load_dotenv()
 
 # Configure Gemini
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-flash-latest')
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
+
+# Cache for market summary (so we only generate once per run)
+_market_summary_cache = None
 
 def format_earnings_data(earnings):
     """Format earnings data for LLM prompt"""
@@ -164,6 +171,9 @@ Provide a 3-4 sentence summary analyzing the stock's performance. DO NOT include
 Be concise and factual. Mention that no news was available."""
 
     try:
+        # Wait if we're hitting rate limits
+        rate_limiter.wait_if_needed()
+        
         response = model.generate_content(prompt)
         summary = response.text
         
@@ -244,13 +254,78 @@ Cover:
 
 Be concise and factual. Mention that no news was available."""
 
-def generate_digest(stocks_data, batch_size=10):
+def generate_market_summary():
+    """Generate a brief macro market summary using the latest market data"""
+    global _market_summary_cache
+    
+    # Return cached version if available
+    if _market_summary_cache is not None:
+        print("  Using cached market overview...")
+        return _market_summary_cache
+    
+    try:
+        import yfinance as yf
+        
+        # Get major indices
+        spy = yf.Ticker("SPY")  # S&P 500
+        qqq = yf.Ticker("QQQ")  # Nasdaq
+        dia = yf.Ticker("DIA")  # Dow
+        
+        # Get today's data
+        spy_hist = spy.history(period="2d")
+        qqq_hist = qqq.history(period="2d")
+        dia_hist = dia.history(period="2d")
+        
+        if spy_hist.empty or qqq_hist.empty or dia_hist.empty:
+            return None
+        
+        # Calculate changes
+        spy_change = ((spy_hist['Close'].iloc[-1] - spy_hist['Close'].iloc[-2]) / spy_hist['Close'].iloc[-2]) * 100
+        qqq_change = ((qqq_hist['Close'].iloc[-1] - qqq_hist['Close'].iloc[-2]) / qqq_hist['Close'].iloc[-2]) * 100
+        dia_change = ((dia_hist['Close'].iloc[-1] - dia_hist['Close'].iloc[-2]) / dia_hist['Close'].iloc[-2]) * 100
+        
+        # Build prompt for macro summary
+        prompt = f"""You are a financial analyst providing a brief market overview.
+
+Today's Market Performance:
+- S&P 500: {spy_change:+.2f}%
+- Nasdaq: {qqq_change:+.2f}%
+- Dow Jones: {dia_change:+.2f}%
+
+Provide a concise 2-3 sentence summary of the overall market environment. Focus on:
+1. The general market direction and sentiment
+2. Any notable sector trends if obvious from the indices
+3. Keep it high-level and factual
+
+DO NOT use a preamble. Start directly with the market analysis."""
+
+        rate_limiter.wait_if_needed()
+        response = model.generate_content(prompt)
+        
+        market_summary = {
+            'spy_change': spy_change,
+            'qqq_change': qqq_change,
+            'dia_change': dia_change,
+            'summary': response.text.strip()
+        }
+        
+        # Cache the result
+        _market_summary_cache = market_summary
+        
+        return market_summary
+        
+    except Exception as e:
+        print(f"  Could not generate market summary: {e}")
+        return None
+
+def generate_digest(stocks_data, batch_size=10, user_name=None):
     """
     Generate a complete daily digest for all stocks using batched API calls
     
     Args:
         stocks_data: List of stock data dicts
         batch_size: Number of stocks to process per API call (default 10)
+        user_name: Optional name for personalized greeting
     
     Returns:
         Complete formatted digest string
@@ -260,8 +335,49 @@ def generate_digest(stocks_data, batch_size=10):
     if not stocks_data:
         return ""
     
-    digest_header = f"# Daily Stock Digest - {datetime.now().strftime('%B %d, %Y')}\n\n"
-    digest_header += "=" * 60 + "\n\n"
+    # Get current time for greeting
+    now = datetime.now()
+    hour = now.hour
+    
+    # Determine greeting
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 17:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+    
+    if user_name:
+        greeting = f"{greeting}, {user_name}!"
+    else:
+        greeting = f"{greeting}!"
+    
+    # Build digest header with title first, then personalized greeting
+    digest_parts = [
+        f"**Daily Stock Digest - {now.strftime('%A, %B %d, %Y')}**",
+        "",
+        f"{greeting}",
+        "",
+        "=" * 60,
+        ""
+    ]
+    
+    # Add market summary
+    print("  Generating market overview...")
+    market_data = generate_market_summary()
+    
+    if market_data:
+        digest_parts.append("**Market Overview**")
+        digest_parts.append("")
+        digest_parts.append(f"**Major Indices:** S&P 500: {market_data['spy_change']:+.2f}% | Nasdaq: {market_data['qqq_change']:+.2f}% | Dow Jones: {market_data['dia_change']:+.2f}%")
+        digest_parts.append("")
+        digest_parts.append(market_data['summary'])
+        digest_parts.append("")
+    
+    digest_parts.append("=" * 60)
+    digest_parts.append("")
+    
+    digest_header = "\n".join(digest_parts)
     
     all_summaries = []
     
@@ -282,7 +398,9 @@ Format EACH stock exactly as:
 
 [Your 3-4 sentence analysis]
 
------------------------------------------------------
+---
+
+IMPORTANT: Add "---" separator after each stock EXCEPT the last one. The last stock should have NO separator after it.
 
 STOCKS TO ANALYZE:
 
@@ -299,6 +417,9 @@ STOCKS TO ANALYZE:
         batch_prompt += "\n".join(stock_prompts)
         
         try:
+            # Wait if we're hitting rate limits
+            rate_limiter.wait_if_needed()
+            
             response = model.generate_content(batch_prompt)
             all_summaries.append(response.text)
         except Exception as e:
@@ -310,6 +431,9 @@ STOCKS TO ANALYZE:
     
     # Combine all summaries
     digest = digest_header + "\n\n".join(all_summaries)
+    
+    # Add dashed separators between stocks
+    digest = digest.replace("---\n\n**", "-" * 60 + "\n\n**")
     
     return digest
 
