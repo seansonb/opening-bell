@@ -175,16 +175,146 @@ Be concise and factual. Mention that no news was available."""
         print(f"Error generating summary for {symbol}: {e}")
         return f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\nError generating summary.\n"
 
-def generate_digest(stocks_data):
+def build_stock_prompt(stock_data):
+    """Build the detailed prompt for a single stock (same logic as summarize_stock_news)"""
+    symbol = stock_data['symbol']
+    name = stock_data['name']
+    price = stock_data['current_price']
+    change = stock_data['change_percent']
+    news = stock_data['news']
+    earnings = stock_data.get('earnings')
+    
+    has_earnings = earnings is not None
+    earnings_text = format_earnings_data(earnings) if has_earnings else ""
+    
+    # Build context for the LLM (same as individual prompt)
+    if news or has_earnings:
+        prompt_parts = [f"""Stock: {name} ({symbol})
+Current Price: ${price:.2f}
+Change: {change:+.2f}%"""]
+        
+        if has_earnings:
+            prompt_parts.append(f"""
+EARNINGS REPORT (Recent):
+Earnings Date: {earnings.get('earnings_date')}
+
+{earnings_text}""")
+        
+        if news:
+            news_text = ""
+            for i, article in enumerate(news, 1):
+                news_text += f"{i}. {article['title']} ({article['publisher']}, {article['published']})\n"
+                if article['summary']:
+                    news_text += f"   {article['summary']}\n"
+            prompt_parts.append(f"""
+Recent News:
+{news_text}""")
+        
+        if has_earnings:
+            prompt_parts.append("""
+Focus on:
+1. Key earnings metrics and whether they beat/missed expectations
+2. Most important financial trends (margins, growth, cash position)
+3. How the market reacted and why
+4. Critical news developments if any
+
+Be analytical and data-driven. Highlight the most important numbers.""")
+        else:
+            prompt_parts.append("""
+Focus on:
+1. The most important news developments
+2. How they relate to the price movement
+3. What investors should watch for
+
+Be concise, factual, and actionable. No fluff.""")
+        
+        return "\n".join(prompt_parts)
+        
+    else:
+        return f"""Stock: {name} ({symbol})
+Current Price: ${price:.2f}
+Change: {change:+.2f}%
+
+No news articles or earnings reports were published recently for this stock.
+
+Cover:
+1. The price movement and what it suggests
+2. Whether this aligns with broader market trends
+3. Any technical observations worth noting
+
+Be concise and factual. Mention that no news was available."""
+
+def generate_digest(stocks_data, batch_size=10):
     """
-    Generate a complete daily digest for all stocks
+    Generate a complete daily digest for all stocks using batched API calls
     
     Args:
         stocks_data: List of stock data dicts
+        batch_size: Number of stocks to process per API call (default 10)
     
     Returns:
         Complete formatted digest string
     """
+    from datetime import datetime
+    
+    if not stocks_data:
+        return ""
+    
+    digest_header = f"# Daily Stock Digest - {datetime.now().strftime('%B %d, %Y')}\n\n"
+    digest_header += "=" * 60 + "\n\n"
+    
+    all_summaries = []
+    
+    # Process stocks in batches
+    for i in range(0, len(stocks_data), batch_size):
+        batch = stocks_data[i:i + batch_size]
+        
+        print(f"  Processing batch {i//batch_size + 1} ({len(batch)} stocks)...")
+        
+        # Build prompt using the same detailed logic as individual summaries
+        batch_prompt = f"""You are a financial analyst providing daily stock updates.
+
+For EACH stock below, provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.
+
+Format EACH stock exactly as:
+
+**[Company Name] ([SYMBOL])**: $[price] ([+/-]X.XX%)
+
+[Your 3-4 sentence analysis]
+
+-----------------------------------------------------
+
+STOCKS TO ANALYZE:
+
+{'='*60}
+
+"""
+        
+        # Add each stock with its detailed prompt
+        stock_prompts = []
+        for stock_data in batch:
+            stock_prompt = build_stock_prompt(stock_data)
+            stock_prompts.append(stock_prompt + "\n\n" + "="*60)
+        
+        batch_prompt += "\n".join(stock_prompts)
+        
+        try:
+            response = model.generate_content(batch_prompt)
+            all_summaries.append(response.text)
+        except Exception as e:
+            print(f"  Error in batch {i//batch_size + 1}: {e}")
+            # Fallback to individual for this batch
+            for stock_data in batch:
+                summary = summarize_stock_news(stock_data)
+                all_summaries.append(summary + "\n" + "-" * 60 + "\n")
+    
+    # Combine all summaries
+    digest = digest_header + "\n\n".join(all_summaries)
+    
+    return digest
+
+def generate_digest_fallback(stocks_data):
+    """Fallback: generate digest with individual API calls"""
     from datetime import datetime
     
     digest = f"# Daily Stock Digest - {datetime.now().strftime('%B %d, %Y')}\n\n"

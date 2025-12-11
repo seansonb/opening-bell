@@ -1,0 +1,52 @@
+{
+  "users": [
+    {
+      "name": "Sean",
+      "email": "spawn.of.sean@gmail.com",
+      "symbols": [
+        "NOW",
+        "HOOD",
+        "KVYO",
+        "SHOP",
+        "NVDA",
+        "MELI",
+        "S",
+        "AMD",
+        "SE",
+        "NBIS",
+        "GRAB",
+        "PANW",
+        "NTNX",
+        "MSFT",
+        "BROS",
+        "BYDDY",
+        "CVNA",
+        "SOFI",
+        "QS",
+        "CRWD",
+        "PLMR"
+      ]
+    },
+    {
+      "name": "Sid",
+      "email": "sidsteinberg1@gmail.com",
+      "symbols": [
+        "META",
+        "GOOG",
+        "NVDA",
+        "AMZN",
+        "BROS",
+        "EME",
+        "MELI",
+        "SE",
+        "TJX",
+        "PLMR",
+        "TOST",
+        "GRAB",
+        "S",
+        "NBIS",
+        "KVYO"
+      ]
+    }
+  ]
+}

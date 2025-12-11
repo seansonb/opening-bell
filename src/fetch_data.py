@@ -13,6 +13,16 @@ def load_watchlist(filepath='data/watchlist.json'):
     except FileNotFoundError:
         print(f"Watchlist not found at {filepath}")
         return []
+    
+def load_users(filepath='data/users.json'):
+    """Load all users and their watchlists"""
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            return data.get('users', [])
+    except FileNotFoundError:
+        print(f"Users file not found at {filepath}")
+        return []
 
 def fetch_stock_data(symbol):
     """Fetch current price, change, and basic info for a stock"""
