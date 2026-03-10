@@ -20,7 +20,7 @@ Fetches stock data, generates AI-written summaries, and emails a daily digest to
 ## Setup
 
 ```bash
-git clone https://github.com/your-username/opening-bell.git
+git clone https://github.com/seansonb/opening-bell.git
 cd opening-bell
 
 python -m venv venv
