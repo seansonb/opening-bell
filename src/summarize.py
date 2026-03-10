@@ -20,6 +20,13 @@ def _get_provider():
 
 # Cache for market summary (so we only generate once per run)
 _market_summary_cache = None
+_stock_summary_cache = {}
+
+
+def clear_summary_cache():
+    global _stock_summary_cache, _market_summary_cache
+    _stock_summary_cache.clear()
+    _market_summary_cache = None
 
 def format_earnings_data(earnings):
     """Format earnings data for LLM prompt"""
@@ -93,14 +100,18 @@ def format_earnings_data(earnings):
 def summarize_stock_news(stock_data):
     """
     Generate a summary for a single stock's news and earnings
-    
+
     Args:
         stock_data: Dict with keys: symbol, name, current_price, change_percent, news, earnings
-    
+
     Returns:
         String summary of the stock's news, earnings, and performance
     """
     symbol = stock_data['symbol']
+
+    if symbol in _stock_summary_cache:
+        return _stock_summary_cache[symbol]
+
     name = stock_data['name']
     price = stock_data['current_price']
     change = stock_data['change_percent']
@@ -181,6 +192,7 @@ Be concise and factual. Mention that no news was available."""
 
         # Format the output
         output = f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\n{summary}\n"
+        _stock_summary_cache[symbol] = output
         return output
 
     except Exception as e:
