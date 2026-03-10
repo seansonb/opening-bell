@@ -111,11 +111,13 @@ def main():
         print(f"⚠️  {successful}/{total} digest(s) sent successfully")
     
     # Show rate limit stats
-    from summarize import rate_limiter
-    stats = rate_limiter.get_stats()
-    print(f"\n📊 API Usage:")
-    print(f"   Requests today: {stats['requests_today']}/{stats['daily_limit']}")
-    print(f"   Last minute: {stats['requests_last_minute']}/{stats['per_minute_limit']}")
+    from summarize import _get_provider
+    provider = _get_provider()
+    if hasattr(provider, 'rate_limiter'):
+        stats = provider.rate_limiter.get_stats()
+        print(f"\n📊 API Usage:")
+        print(f"   Requests today: {stats['requests_today']}/{stats['daily_limit']}")
+        print(f"   Last minute: {stats['requests_last_minute']}/{stats['per_minute_limit']}")
     
     print("=" * 60)
     

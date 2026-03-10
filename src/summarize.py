@@ -1,17 +1,22 @@
 import os
 from dotenv import load_dotenv
-import google.generativeai as genai
-from rate_limiter import RateLimiter
+from llm_providers import get_provider
 
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-flash-latest')
+# LLM Provider configuration
+DEFAULT_LLM_PROVIDER = 'claude'
+_provider = None  # Lazy-loaded provider instance
 
-# Global rate limiter instance
-rate_limiter = RateLimiter()
+
+def _get_provider():
+    """Get or create the LLM provider instance"""
+    global _provider
+    if _provider is None:
+        provider_name = os.getenv('LLM_PROVIDER', DEFAULT_LLM_PROVIDER).lower()
+        _provider = get_provider(provider_name)
+    return _provider
 
 # Cache for market summary (so we only generate once per run)
 _market_summary_cache = None
@@ -171,16 +176,13 @@ Provide a 3-4 sentence summary analyzing the stock's performance. DO NOT include
 Be concise and factual. Mention that no news was available."""
 
     try:
-        # Wait if we're hitting rate limits
-        rate_limiter.wait_if_needed()
-        
-        response = model.generate_content(prompt)
-        summary = response.text
-        
+        provider = _get_provider()
+        summary = provider.generate(prompt)
+
         # Format the output
         output = f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\n{summary}\n"
         return output
-    
+
     except Exception as e:
         print(f"Error generating summary for {symbol}: {e}")
         return f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\nError generating summary.\n"
@@ -299,14 +301,14 @@ Provide a concise 2-3 sentence summary of the overall market environment. Focus 
 
 DO NOT use a preamble. Start directly with the market analysis."""
 
-        rate_limiter.wait_if_needed()
-        response = model.generate_content(prompt)
-        
+        provider = _get_provider()
+        summary_text = provider.generate(prompt)
+
         market_summary = {
             'spy_change': spy_change,
             'qqq_change': qqq_change,
             'dia_change': dia_change,
-            'summary': response.text.strip()
+            'summary': summary_text.strip()
         }
         
         # Cache the result
@@ -380,15 +382,18 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
     digest_header = "\n".join(digest_parts)
     
     all_summaries = []
-    
-    # Process stocks in batches
-    for i in range(0, len(stocks_data), batch_size):
-        batch = stocks_data[i:i + batch_size]
-        
-        print(f"  Processing batch {i//batch_size + 1} ({len(batch)} stocks)...")
-        
-        # Build prompt using the same detailed logic as individual summaries
-        batch_prompt = f"""You are a financial analyst providing daily stock updates.
+    provider = _get_provider()
+
+    # Choose processing strategy based on provider capabilities
+    if provider.supports_batching():
+        # GEMINI PATH: Process stocks in batches
+        for i in range(0, len(stocks_data), batch_size):
+            batch = stocks_data[i:i + batch_size]
+
+            print(f"  Processing batch {i//batch_size + 1} ({len(batch)} stocks)...")
+
+            # Build prompt using the same detailed logic as individual summaries
+            batch_prompt = f"""You are a financial analyst providing daily stock updates.
 
 For EACH stock below, provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.
 
@@ -407,27 +412,31 @@ STOCKS TO ANALYZE:
 {'='*60}
 
 """
-        
-        # Add each stock with its detailed prompt
-        stock_prompts = []
-        for stock_data in batch:
-            stock_prompt = build_stock_prompt(stock_data)
-            stock_prompts.append(stock_prompt + "\n\n" + "="*60)
-        
-        batch_prompt += "\n".join(stock_prompts)
-        
-        try:
-            # Wait if we're hitting rate limits
-            rate_limiter.wait_if_needed()
-            
-            response = model.generate_content(batch_prompt)
-            all_summaries.append(response.text)
-        except Exception as e:
-            print(f"  Error in batch {i//batch_size + 1}: {e}")
-            # Fallback to individual for this batch
+
+            # Add each stock with its detailed prompt
+            stock_prompts = []
             for stock_data in batch:
-                summary = summarize_stock_news(stock_data)
-                all_summaries.append(summary + "\n" + "-" * 60 + "\n")
+                stock_prompt = build_stock_prompt(stock_data)
+                stock_prompts.append(stock_prompt + "\n\n" + "="*60)
+
+            batch_prompt += "\n".join(stock_prompts)
+
+            try:
+                response_text = provider.generate(batch_prompt)
+                all_summaries.append(response_text)
+            except Exception as e:
+                print(f"  Error in batch {i//batch_size + 1}: {e}")
+                # Fallback to individual for this batch
+                for stock_data in batch:
+                    summary = summarize_stock_news(stock_data)
+                    all_summaries.append(summary + "\n" + "-" * 60 + "\n")
+    else:
+        # CLAUDE PATH: Process stocks one at a time
+        print(f"  Processing {len(stocks_data)} stocks individually...")
+        for i, stock_data in enumerate(stocks_data, 1):
+            print(f"  Processing stock {i}/{len(stocks_data)}: {stock_data['symbol']}...")
+            summary = summarize_stock_news(stock_data)
+            all_summaries.append(summary + "\n" + "-" * 60 + "\n")
     
     # Combine all summaries
     digest = digest_header + "\n\n".join(all_summaries)
