@@ -1,10 +1,11 @@
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from fetch_news import fetch_stock_news
 from fetch_earnings import fetch_earnings_data
 from stock.cache import stock_cache
 from stock.news_enricher import enrich_articles
+from db.queries import get_recent_articles, save_articles
 
 def load_watchlist(filepath='data/watchlist.json'):
     """Load stock symbols from watchlist file"""
@@ -63,6 +64,37 @@ def fetch_stock_data(symbol):
         print(f"Error fetching data for {symbol}: {e}")
         return None
 
+def _fetch_news_with_cache(symbol: str, company_name: str) -> list:
+    """
+    Return news articles for symbol, using DB cache when available.
+    Cache window: 3 days on Monday (covers weekend), 1 day otherwise.
+    """
+    now = datetime.utcnow()
+    days_back = 3 if now.weekday() == 0 else 1
+    since = now - timedelta(days=days_back)
+
+    cached = get_recent_articles(symbol, since)
+    if cached:
+        articles = [
+            {
+                'title': a.title,
+                'publisher': a.publisher,
+                'link': a.url,
+                'published': a.published_at.strftime('%Y-%m-%d %H:%M') if a.published_at else '',
+                'summary': a.summary or '',
+            }
+            for a in cached
+        ]
+        print(f"  [{symbol}] Using {len(articles)} cached articles from DB")
+        return articles
+
+    raw_news = fetch_stock_news(symbol)
+    enriched = enrich_articles(raw_news, symbol, company_name)
+    save_articles(enriched, symbol)
+    print(f"  [{symbol}] Fetched {len(enriched)} new articles from yFinance")
+    return enriched
+
+
 def fetch_all_data(watchlist):
     """Fetch data, news, and earnings for all stocks in watchlist"""
     results = []
@@ -72,8 +104,7 @@ def fetch_all_data(watchlist):
         
         stock_data = fetch_stock_data(symbol)
         if stock_data:
-            raw_news = fetch_stock_news(symbol)
-            stock_data['news'] = enrich_articles(raw_news, symbol, stock_data['name'])
+            stock_data['news'] = _fetch_news_with_cache(symbol, stock_data['name'])
             stock_data['earnings'] = fetch_earnings_data(symbol)
             stock_cache.store(symbol, stock_data['info'], stock_data['news'], stock_data['history'])
             results.append(stock_data)

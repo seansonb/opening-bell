@@ -6,39 +6,38 @@ Fetches stock data, generates AI summaries, and emails daily digest
 
 import os
 import sys
-from fetch_data import load_users, load_watchlist, fetch_all_data
+from fetch_data import fetch_all_data
 from summarize import generate_digest
 from send_email import send_digest_email
 from thesis.thesis_agent import ThesisAgent
 from utils.debug import set_debug
+from db.database import init_db, purge_old_articles
+from db.queries import get_all_users, get_watchlist, get_thesis
 
-THESES_DIR = os.path.join(os.path.dirname(__file__), '..', 'theses')
-THESES_TEST_DIR = os.path.join(THESES_DIR, 'test')
-
-def _run_thesis_analysis(symbols, stocks_data_by_symbol, theses_dir, verbose=False):
+def _run_thesis_analysis(user_id, symbols, stocks_data_by_symbol, verbose=False):
     """
-    Run thesis analysis for any symbol that has a thesis file in theses_dir.
+    Run thesis analysis for any symbol that has a thesis in the DB for this user.
     Returns a list of ThesisUpdate results.
     """
     agent = ThesisAgent()
     results = []
     for symbol in symbols:
-        thesis_path = os.path.join(theses_dir, f"{symbol.upper()}.md")
-        if not os.path.exists(thesis_path):
+        thesis = get_thesis(user_id, symbol)
+        if thesis is None:
             if verbose:
-                print(f"  [thesis] No thesis file for {symbol} in {theses_dir} — skipping")
+                print(f"  [thesis] No thesis in DB for {symbol} — skipping")
             continue
 
         if verbose:
-            print(f"  [thesis] Loaded thesis for {symbol} from {thesis_path}")
+            print(f"  [thesis] Found thesis in DB for {symbol}")
 
         stock = stocks_data_by_symbol.get(symbol.upper(), {})
         try:
             update = agent.analyze(
                 symbol,
+                user_id=user_id,
                 news=stock.get('news'),
                 earnings=stock.get('earnings'),
-                theses_dir=theses_dir,
             )
             results.append(update)
             if verbose:
@@ -64,55 +63,54 @@ def _build_thesis_section(updates):
 
 
 def process_user(user, test_mode=False):
-    """Process a single user's digest"""
-    name = user.get('name', 'Unknown')
-    email = user.get('email')
-    symbols = user.get('symbols', [])
-    
+    """Process a single user's digest. user is a User ORM object."""
+    name = user.name
+    email = user.email
+    symbols = get_watchlist(user.id)
+
     if not email:
         print(f"⚠️  Skipping {name} - no email address")
         return False
-    
+
     if not symbols:
         print(f"⚠️  Skipping {name} - no symbols in watchlist")
         return False
-    
+
     print(f"\n{'='*60}")
     print(f"Processing digest for {name} ({email})")
     print(f"{'='*60}")
-    
+
     # Fetch stock data
     print(f"📊 Fetching data for {len(symbols)} stocks...")
     stocks_data = fetch_all_data(symbols)
-    
+
     if not stocks_data:
         print(f"❌ Failed to fetch any stock data for {name}")
         return False
-    
+
     print(f"✓ Successfully fetched data for {len(stocks_data)} stocks")
-    
+
     # Generate AI summaries
     print("🤖 Generating AI summaries...")
     digest = generate_digest(stocks_data, user_name=name)
     print("✓ Digest generated")
 
-    # Run thesis analysis for any symbols that have a thesis file
-    theses_dir = THESES_TEST_DIR if test_mode else THESES_DIR
+    # Run thesis analysis for any symbols with a thesis in DB
     stocks_by_symbol = {s['symbol'].upper(): s for s in stocks_data}
     print("📋 Running thesis analysis...")
     thesis_updates = _run_thesis_analysis(
-        symbols, stocks_by_symbol, theses_dir, verbose=test_mode
+        user.id, symbols, stocks_by_symbol, verbose=test_mode
     )
     if thesis_updates:
         digest += "\n\n" + _build_thesis_section(thesis_updates)
         print(f"✓ Thesis Watch section added ({len(thesis_updates)} ticker(s))")
     else:
-        print("  No thesis files matched — skipping Thesis Watch section")
+        print("  No theses found in DB — skipping Thesis Watch section")
 
     # Send email
     print(f"📧 Sending email to {email}...")
     success = send_digest_email(digest, recipient_email=email)
-    
+
     if success:
         print(f"✅ Digest sent successfully to {name}")
         return True
@@ -130,7 +128,8 @@ def main():
     
     # Check for test mode
     test_mode = '--test' in sys.argv or '-t' in sys.argv
-    users_file = 'data/users_test.json' if test_mode else 'data/users.json'
+    if test_mode:
+        os.environ['TEST_MODE'] = 'true'
 
     # Check for debug mode
     if '--debug' in sys.argv:
@@ -140,30 +139,22 @@ def main():
 
     if test_mode:
         print("🧪 Running in TEST MODE")
-        print(f"   Using {users_file}")
         print()
-    
-    # Load all users
+
+    # Initialize DB (creates tables + seeds users/theses)
+    print("🗄️  Initializing database...")
+    init_db()
+    purge_old_articles()
+    print("✓ Database ready")
+
+    # Load all users from DB
     print("👥 Loading users...")
-    users = load_users(filepath=users_file)
-    
+    users = get_all_users()
+
     if not users:
-        print("❌ No users found in data/users.json")
-        print("Falling back to single watchlist mode...")
-        
-        # Fallback to old single-user mode
-        watchlist = load_watchlist()
-        
-        if not watchlist:
-            print("❌ No stocks found in watchlist either. Exiting.")
-            sys.exit(1)
-        
-        users = [{
-            'name': 'Default User',
-            'email': None,  # Will use RECIPIENT_EMAIL from .env
-            'symbols': watchlist
-        }]
-    
+        print("❌ No users found in database. Exiting.")
+        sys.exit(1)
+
     print(f"✓ Found {len(users)} user(s)")
     
     # Process each user

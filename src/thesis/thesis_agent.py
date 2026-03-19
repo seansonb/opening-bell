@@ -16,9 +16,10 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from llm_providers import LLMProvider, get_provider
-from thesis.thesis_manager import load_thesis
+from thesis.thesis_manager import _parse_frontmatter
 from stock.cache import stock_cache
 from utils.debug import debug_log
+from db.queries import get_thesis, save_verdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 from fetch_news import fetch_stock_news
@@ -120,13 +121,19 @@ class ThesisAgent:
     def analyze(
         self,
         ticker: str,
+        user_id: int | None = None,
         news: list | None = None,
         earnings: dict | None = None,
-        theses_dir: str | None = None,
     ) -> ThesisUpdate:
         ticker = ticker.upper()
 
-        thesis = load_thesis(ticker, theses_dir)
+        # Load thesis from DB
+        thesis_obj = get_thesis(user_id, ticker) if user_id is not None else None
+        if thesis_obj is None:
+            raise ValueError(f"No thesis found in DB for {ticker} (user_id={user_id})")
+        frontmatter, body = _parse_frontmatter(thesis_obj.content)
+        thesis = {'frontmatter': frontmatter, 'body': body}
+
         if news is None:
             news = fetch_stock_news(ticker)
         if earnings is None:
@@ -144,10 +151,13 @@ class ThesisAgent:
             raise ValueError(f"LLM returned non-JSON response: {e}\n\nRaw response:\n{raw}")
 
         verdict = data.get('verdict', 'NEUTRAL')
+        summary = data.get('summary', '')
+        save_verdict(thesis_obj.id, verdict, summary)
+
         return ThesisUpdate(
             ticker=ticker,
             verdict=verdict,
-            summary=data.get('summary', ''),
+            summary=summary,
             suggested_log_entry=data.get('suggested_log_entry', ''),
             is_significant=verdict in SIGNIFICANT_VERDICTS,
         )
