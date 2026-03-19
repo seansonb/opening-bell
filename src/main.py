@@ -10,6 +10,7 @@ from fetch_data import load_users, load_watchlist, fetch_all_data
 from summarize import generate_digest
 from send_email import send_digest_email
 from thesis.thesis_agent import ThesisAgent
+from utils.debug import set_debug
 
 THESES_DIR = os.path.join(os.path.dirname(__file__), '..', 'theses')
 THESES_TEST_DIR = os.path.join(THESES_DIR, 'test')
@@ -130,7 +131,13 @@ def main():
     # Check for test mode
     test_mode = '--test' in sys.argv or '-t' in sys.argv
     users_file = 'data/users_test.json' if test_mode else 'data/users.json'
-    
+
+    # Check for debug mode
+    if '--debug' in sys.argv:
+        from datetime import date
+        set_debug(True)
+        print(f"🐛 Debug mode enabled — logging to logs/debug_{date.today().isoformat()}.log")
+
     if test_mode:
         print("🧪 Running in TEST MODE")
         print(f"   Using {users_file}")

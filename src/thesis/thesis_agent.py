@@ -17,6 +17,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from llm_providers import LLMProvider, get_provider
 from thesis.thesis_manager import load_thesis
+from stock.cache import stock_cache
+from utils.debug import debug_log
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 from fetch_news import fetch_stock_news
@@ -38,6 +40,15 @@ class ThesisUpdate:
     summary: str
     suggested_log_entry: str
     is_significant: bool
+
+
+def _get_company_description(ticker: str) -> str:
+    """Return longBusinessSummary from cache, falling back to a direct yFinance call."""
+    info = stock_cache.get_info(ticker)
+    if info is None:
+        import yfinance as yf
+        info = yf.Ticker(ticker).info
+    return info.get('longBusinessSummary', '')
 
 
 def _build_prompt(ticker: str, thesis: dict, news: list, earnings: dict | None) -> str:
@@ -63,12 +74,17 @@ def _build_prompt(ticker: str, thesis: dict, news: list, earnings: dict | None) 
     else:
         earnings_block = "No recent earnings data."
 
+    description = _get_company_description(ticker)
+
     return f"""You are an investment thesis analyst. Evaluate whether the recent data CONFIRMS, WEAKENS, is NEUTRAL toward, or requires MONITORING for the thesis below.
 
 == THESIS FOR {ticker} ==
 Status: {frontmatter.get('status')}
 Sector theses: {frontmatter.get('sector_theses')}
 Macro theses: {frontmatter.get('macro_theses')}
+
+COMPANY DESCRIPTION:
+{description}
 
 {body}
 
@@ -117,7 +133,10 @@ class ThesisAgent:
             earnings = fetch_earnings_data(ticker)
 
         prompt = _build_prompt(ticker, thesis, news, earnings)
+        debug_log(f"THESIS PROMPT — {ticker}", prompt)
+
         raw = self.provider.generate(prompt, max_tokens=2048)
+        debug_log(f"THESIS VERDICT — {ticker}", raw)
 
         try:
             data = json.loads(raw)

@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import json
 from fetch_news import fetch_stock_news
 from fetch_earnings import fetch_earnings_data
+from stock.cache import stock_cache
+from stock.news_enricher import enrich_articles
 
 def load_watchlist(filepath='data/watchlist.json'):
     """Load stock symbols from watchlist file"""
@@ -54,6 +56,8 @@ def fetch_stock_data(symbol):
             'change_percent': change_percent,
             'volume': hist['Volume'].iloc[-1] if 'Volume' in hist else None,
             'market_cap': None,
+            'info': info,
+            'history': hist,
         }
     except Exception as e:
         print(f"Error fetching data for {symbol}: {e}")
@@ -68,8 +72,10 @@ def fetch_all_data(watchlist):
         
         stock_data = fetch_stock_data(symbol)
         if stock_data:
-            stock_data['news'] = fetch_stock_news(symbol)
+            raw_news = fetch_stock_news(symbol)
+            stock_data['news'] = enrich_articles(raw_news, symbol, stock_data['name'])
             stock_data['earnings'] = fetch_earnings_data(symbol)
+            stock_cache.store(symbol, stock_data['info'], stock_data['news'], stock_data['history'])
             results.append(stock_data)
     
     return results

@@ -105,6 +105,25 @@ python main.py --test
 python main.py -t
 ```
 
+Debug run (prints full LLM prompts and raw responses to stdout and a log file):
+
+```bash
+python main.py --debug
+```
+
+Flags can be combined:
+
+```bash
+python main.py --test --debug
+```
+
+Debug output is written to `logs/debug_YYYY-MM-DD.log`. Each entry includes:
+
+- **RAW NEWS** — the news articles fetched for each stock before the prompt is built
+- **STOCK PROMPT** — the full prompt sent to the LLM for each stock summary
+- **THESIS PROMPT** — the full prompt sent to the LLM for thesis analysis
+- **THESIS VERDICT** — the raw LLM response before JSON parsing
+
 ## GitHub Actions
 
 The workflow at `.github/workflows/daily-digest.yml` runs `python src/main.py` Monday–Friday at 9:00 AM ET (14:00 UTC). It can also be triggered manually from the Actions tab.

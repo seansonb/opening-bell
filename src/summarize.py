@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from llm_providers import get_provider
+from utils.debug import debug_log
 
 # Load environment variables
 load_dotenv()
@@ -117,7 +118,16 @@ def summarize_stock_news(stock_data):
     change = stock_data['change_percent']
     news = stock_data['news']
     earnings = stock_data.get('earnings')
-    
+
+    if news:
+        news_debug = "\n".join(
+            f"[{a['published']}] {a['title']} ({a['publisher']})\n  {a['summary']}"
+            for a in news
+        )
+    else:
+        news_debug = "(no articles)"
+    debug_log(f"RAW NEWS — {symbol}", news_debug)
+
     # Check if there's earnings data
     has_earnings = earnings is not None
     earnings_text = format_earnings_data(earnings) if has_earnings else ""
@@ -169,7 +179,7 @@ Focus on:
 Be concise, factual, and actionable. No fluff.""")
         
         prompt = "\n".join(prompt_parts)
-        
+
     else:
         prompt = f"""You are a financial analyst providing daily stock updates.
 
@@ -185,6 +195,8 @@ Provide a 3-4 sentence summary analyzing the stock's performance. DO NOT include
 3. Any technical observations worth noting
 
 Be concise and factual. Mention that no news was available."""
+
+    debug_log(f"STOCK PROMPT — {symbol}", prompt)
 
     try:
         provider = _get_provider()
