@@ -11,8 +11,8 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers"""
 
     @abstractmethod
-    def generate(self, prompt: str) -> str:
-        """Generate text from a prompt"""
+    def generate(self, prompt: str, **kwargs) -> str:
+        """Generate text from a prompt. Subclasses accept provider-specific kwargs."""
         pass
 
     def supports_batching(self) -> bool:
@@ -28,12 +28,17 @@ class ClaudeProvider(LLMProvider):
         self.client = anthropic.Anthropic(api_key=os.getenv('CLAUDE_API_KEY'))
         self.model = "claude-sonnet-4-20250514"
 
-    def generate(self, prompt: str) -> str:
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}]
-        )
+    def generate(self, prompt: str, **kwargs) -> str:
+        create_kwargs = {
+            "model": self.model,
+            "max_tokens": kwargs.get("max_tokens", 1024),
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if "system" in kwargs:
+            create_kwargs["system"] = kwargs["system"]
+        if "temperature" in kwargs:
+            create_kwargs["temperature"] = kwargs["temperature"]
+        response = self.client.messages.create(**create_kwargs)
         return response.content[0].text
 
     def supports_batching(self) -> bool:
@@ -49,7 +54,7 @@ class GeminiProvider(LLMProvider):
         self.model = genai.GenerativeModel('gemini-flash-latest')
         self.rate_limiter = RateLimiter()
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, **kwargs) -> str:
         self.rate_limiter.wait_if_needed()
         response = self.model.generate_content(prompt)
         return response.text

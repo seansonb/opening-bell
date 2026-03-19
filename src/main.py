@@ -4,12 +4,65 @@ Opening Bell - Daily Stock Digest Generator
 Fetches stock data, generates AI summaries, and emails daily digest
 """
 
+import os
 import sys
 from fetch_data import load_users, load_watchlist, fetch_all_data
 from summarize import generate_digest
 from send_email import send_digest_email
+from thesis.thesis_agent import ThesisAgent
 
-def process_user(user):
+THESES_DIR = os.path.join(os.path.dirname(__file__), '..', 'theses')
+THESES_TEST_DIR = os.path.join(THESES_DIR, 'test')
+
+def _run_thesis_analysis(symbols, stocks_data_by_symbol, theses_dir, verbose=False):
+    """
+    Run thesis analysis for any symbol that has a thesis file in theses_dir.
+    Returns a list of ThesisUpdate results.
+    """
+    agent = ThesisAgent()
+    results = []
+    for symbol in symbols:
+        thesis_path = os.path.join(theses_dir, f"{symbol.upper()}.md")
+        if not os.path.exists(thesis_path):
+            if verbose:
+                print(f"  [thesis] No thesis file for {symbol} in {theses_dir} — skipping")
+            continue
+
+        if verbose:
+            print(f"  [thesis] Loaded thesis for {symbol} from {thesis_path}")
+
+        stock = stocks_data_by_symbol.get(symbol.upper(), {})
+        try:
+            update = agent.analyze(
+                symbol,
+                news=stock.get('news'),
+                earnings=stock.get('earnings'),
+                theses_dir=theses_dir,
+            )
+            results.append(update)
+            if verbose:
+                print(f"  [thesis] {symbol} verdict: {update.verdict}")
+                print(f"  [thesis] {symbol} summary: {update.summary}")
+        except Exception as e:
+            print(f"  [thesis] Error analyzing {symbol}: {e}")
+
+    return results
+
+
+def _build_thesis_section(updates):
+    """Format thesis analysis results into a digest section string."""
+    lines = ["=" * 60, "", "**Thesis Watch**", ""]
+    for u in updates:
+        lines.append(f"**{u.ticker}** — {u.verdict}")
+        lines.append("")
+        lines.append(u.summary)
+        lines.append("")
+        lines.append("-" * 60)
+        lines.append("")
+    return "\n".join(lines)
+
+
+def process_user(user, test_mode=False):
     """Process a single user's digest"""
     name = user.get('name', 'Unknown')
     email = user.get('email')
@@ -41,7 +94,20 @@ def process_user(user):
     print("🤖 Generating AI summaries...")
     digest = generate_digest(stocks_data, user_name=name)
     print("✓ Digest generated")
-    
+
+    # Run thesis analysis for any symbols that have a thesis file
+    theses_dir = THESES_TEST_DIR if test_mode else THESES_DIR
+    stocks_by_symbol = {s['symbol'].upper(): s for s in stocks_data}
+    print("📋 Running thesis analysis...")
+    thesis_updates = _run_thesis_analysis(
+        symbols, stocks_by_symbol, theses_dir, verbose=test_mode
+    )
+    if thesis_updates:
+        digest += "\n\n" + _build_thesis_section(thesis_updates)
+        print(f"✓ Thesis Watch section added ({len(thesis_updates)} ticker(s))")
+    else:
+        print("  No thesis files matched — skipping Thesis Watch section")
+
     # Send email
     print(f"📧 Sending email to {email}...")
     success = send_digest_email(digest, recipient_email=email)
@@ -96,7 +162,7 @@ def main():
     # Process each user
     results = []
     for user in users:
-        success = process_user(user)
+        success = process_user(user, test_mode=test_mode)
         results.append(success)
     
     # Summary
