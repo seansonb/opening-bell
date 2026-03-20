@@ -1,0 +1,210 @@
+{
+  "HUBS": {
+    "confirms": {
+      "signal": [
+        {
+          "title": "HubSpot Reports Record NRR of 112% as AI Features Drive Expansion Revenue",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot's net revenue retention hit an all-time high this quarter, driven by strong adoption of its AI-powered marketing tools. Churn fell to historic lows as enterprise customers expanded seat counts.",
+          "url": "https://fixture.test/hubs-confirms-1"
+        },
+        {
+          "title": "HubSpot Breeze AI Adoption Doubles Quarter-Over-Quarter, Driving 18% ARPU Expansion",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot's AI suite Breeze saw adoption double among mid-market customers in Q1, with the company reporting an 18% increase in average revenue per user as customers upgraded to AI-enabled tiers. Management raised full-year guidance.",
+          "url": "https://fixture.test/hubs-confirms-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "HubSpot Named to Fortune 500 List for Third Consecutive Year",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot has been included in the Fortune 500 for the third year running, reflecting its continued revenue growth and market presence.",
+          "url": "https://fixture.test/hubs-confirms-noise-1"
+        },
+        {
+          "title": "HubSpot CEO Yamini Rangan to Keynote SaaStr Annual Conference",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot CEO Yamini Rangan will deliver a keynote address at SaaStr Annual, where she is expected to discuss go-to-market trends for mid-market SaaS companies.",
+          "url": "https://fixture.test/hubs-confirms-noise-2"
+        }
+      ]
+    },
+    "weakens": {
+      "signal": [
+        {
+          "title": "HubSpot Loses Three Enterprise Accounts to Salesforce as AI Features Disappoint",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "Three Fortune 500 customers cited underwhelming AI capabilities as the primary reason for switching to Salesforce CRM. HubSpot's AI roadmap is seen as trailing competitors by at least two product cycles.",
+          "url": "https://fixture.test/hubs-weakens-1"
+        },
+        {
+          "title": "HubSpot NRR Falls to 96% as SMB Churn Accelerates for Second Straight Quarter",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot reported net revenue retention of 96% in Q1, below the 100% threshold for the second consecutive quarter. Management attributed the decline to elevated SMB churn, with customers citing AI-powered DIY alternatives as a factor.",
+          "url": "https://fixture.test/hubs-weakens-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "HubSpot Joins S&P MidCap 400 Index Following Reconstitution",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot will be added to the S&P MidCap 400 index as part of the quarterly reconstitution, effective at market open on March 22.",
+          "url": "https://fixture.test/hubs-weakens-noise-1"
+        },
+        {
+          "title": "HubSpot Expands European Headquarters to Dublin Campus",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot announced an expansion of its Dublin office, adding 200 engineering and customer success roles as part of its EMEA growth strategy.",
+          "url": "https://fixture.test/hubs-weakens-noise-2"
+        }
+      ]
+    },
+    "monitor": {
+      "signal": [
+        {
+          "title": "HubSpot Q1 Results In Line With Estimates as Management Maintains Guidance",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot reported Q1 revenue and EPS in line with consensus estimates, with NRR holding steady at 103%. Management maintained full-year guidance but declined to raise it, citing macro uncertainty in the SMB segment.",
+          "url": "https://fixture.test/hubs-monitor-1"
+        },
+        {
+          "title": "HubSpot AI Feature Rollout Slower Than Expected, CFO Says Monetization Timeline Pushed to H2",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot's CFO noted on the earnings call that AI feature monetization is tracking behind initial expectations, with meaningful ARPU contribution now expected in the second half of the year rather than Q2. Adoption metrics remain early-stage.",
+          "url": "https://fixture.test/hubs-monitor-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "HubSpot Releases Annual State of Marketing Report",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot published its annual State of Marketing report, surveying over 1,400 marketing professionals on AI adoption, channel mix, and budget priorities for 2026.",
+          "url": "https://fixture.test/hubs-monitor-noise-1"
+        },
+        {
+          "title": "HubSpot Partners With LinkedIn to Enhance CRM Contact Syncing",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "HubSpot announced an expanded partnership with LinkedIn that enables deeper contact and activity syncing between the two platforms for Sales Hub users.",
+          "url": "https://fixture.test/hubs-monitor-noise-2"
+        }
+      ]
+    }
+  },
+  "NOW": {
+    "confirms": {
+      "signal": [
+        {
+          "title": "ServiceNow AI Agents Drive Record Workflow Automation Across Fortune 500",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow reported that its AI-powered agentic workflows are now live across 40% of its enterprise customer base, with automation rates up 3x year-over-year. Customers cited measurable ROI within 90 days of deployment.",
+          "url": "https://fixture.test/now-confirms-1"
+        },
+        {
+          "title": "ServiceNow Raises Full-Year Guidance After Record cRPO Growth of 26%",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow raised its full-year revenue and operating margin guidance following a record quarter of current remaining performance obligations growth. The company cited strong federal and financial services demand for its AI platform.",
+          "url": "https://fixture.test/now-confirms-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "ServiceNow Recognized as a Leader in Gartner Magic Quadrant for IT Service Management",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "Gartner named ServiceNow a Leader in its 2026 Magic Quadrant for IT Service Management Platforms for the eighth consecutive year.",
+          "url": "https://fixture.test/now-confirms-noise-1"
+        },
+        {
+          "title": "ServiceNow CTO to Present at MIT Sloan CIO Symposium",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow's Chief Technology Officer will present on enterprise AI architecture at the MIT Sloan CIO Symposium in May.",
+          "url": "https://fixture.test/now-confirms-noise-2"
+        }
+      ]
+    },
+    "weakens": {
+      "signal": [
+        {
+          "title": "ServiceNow Faces Pushback as Customers Balk at AI Pricing Tier Increases",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "Several large ServiceNow customers are pushing back on the company's new AI-tiered pricing model, with two Fortune 100 accounts threatening to delay renewals. Analysts warn NRR could compress if pricing friction persists.",
+          "url": "https://fixture.test/now-weakens-1"
+        },
+        {
+          "title": "ServiceNow Misses Q1 Revenue Estimates as Federal Spending Freeze Delays Large Deals",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow reported Q1 revenue below consensus after a federal spending freeze caused three large DOGE-adjacent contract renewals to slip into Q2. Management lowered near-term guidance while expressing confidence in the second half.",
+          "url": "https://fixture.test/now-weakens-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "ServiceNow Completes Acquisition of AI Workflow Startup Raytion",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow completed its acquisition of Raytion, a German AI-powered document processing startup, for an undisclosed sum. The technology will be integrated into the Now Platform's document intelligence capabilities.",
+          "url": "https://fixture.test/now-weakens-noise-1"
+        },
+        {
+          "title": "ServiceNow Opens New Data Center Region in Singapore",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow launched a new data sovereignty region in Singapore to support Asia-Pacific enterprise customers with data residency requirements.",
+          "url": "https://fixture.test/now-weakens-noise-2"
+        }
+      ]
+    },
+    "monitor": {
+      "signal": [
+        {
+          "title": "ServiceNow Q1 In Line but AI Agent Attach Rate Below Expectations at 12%",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow's Q1 results met estimates but AI agent attach rates came in at 12% of new contracts versus the 18-20% range analysts expected. Management called it early-stage adoption and reiterated confidence in the full-year AI revenue ramp.",
+          "url": "https://fixture.test/now-monitor-1"
+        },
+        {
+          "title": "ServiceNow Sees Mixed Federal Demand as Some Agencies Pause, Others Accelerate",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow's federal pipeline showed divergence in Q1, with defense and intelligence agencies accelerating AI workflow investments while civilian agencies slowed procurement amid budget uncertainty. Management said net federal impact was roughly neutral.",
+          "url": "https://fixture.test/now-monitor-2"
+        }
+      ],
+      "noise": [
+        {
+          "title": "ServiceNow Launches Updated Partner Certification Program",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow unveiled a redesigned partner certification program with new AI-focused tracks, aimed at growing its implementation partner ecosystem ahead of the Now Assist expansion.",
+          "url": "https://fixture.test/now-monitor-noise-1"
+        },
+        {
+          "title": "ServiceNow Sponsors NVIDIA GTC Developer Conference for Second Consecutive Year",
+          "publisher": "Test Fixture",
+          "published": "2026-03-19",
+          "summary": "ServiceNow returned as a platinum sponsor of NVIDIA's GTC developer conference, showcasing its integration with NVIDIA AI Enterprise for accelerated enterprise workflow automation.",
+          "url": "https://fixture.test/now-monitor-noise-2"
+        }
+      ]
+    }
+  }
+}

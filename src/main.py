@@ -11,10 +11,11 @@ from summarize import generate_digest
 from send_email import send_digest_email
 from thesis.thesis_agent import ThesisAgent
 from utils.debug import set_debug
+from utils.news_injector import load_injected_news, validate_injected_news
 from db.database import init_db, purge_old_articles
 from db.queries import get_all_users, get_watchlist, get_thesis
 
-def _run_thesis_analysis(user_id, symbols, stocks_data_by_symbol, verbose=False):
+def _run_thesis_analysis(user_id, symbols, stocks_data_by_symbol, verbose=False, injected_news=None, scenario='confirms'):
     """
     Run thesis analysis for any symbol that has a thesis in the DB for this user.
     Returns a list of ThesisUpdate results.
@@ -38,6 +39,8 @@ def _run_thesis_analysis(user_id, symbols, stocks_data_by_symbol, verbose=False)
                 user_id=user_id,
                 news=stock.get('news'),
                 earnings=stock.get('earnings'),
+                injected_news=injected_news,
+                scenario=scenario,
             )
             results.append(update)
             if verbose:
@@ -62,7 +65,7 @@ def _build_thesis_section(updates):
     return "\n".join(lines)
 
 
-def process_user(user, test_mode=False):
+def process_user(user, test_mode=False, injected_news=None, scenario='confirms'):
     """Process a single user's digest. user is a User ORM object."""
     name = user.name
     email = user.email
@@ -99,7 +102,7 @@ def process_user(user, test_mode=False):
     stocks_by_symbol = {s['symbol'].upper(): s for s in stocks_data}
     print("📋 Running thesis analysis...")
     thesis_updates = _run_thesis_analysis(
-        user.id, symbols, stocks_by_symbol, verbose=test_mode
+        user.id, symbols, stocks_by_symbol, verbose=test_mode, injected_news=injected_news, scenario=scenario
     )
     if thesis_updates:
         digest += "\n\n" + _build_thesis_section(thesis_updates)
@@ -131,6 +134,19 @@ def main():
     if test_mode:
         os.environ['TEST_MODE'] = 'true'
 
+    # Check for news injection flag and optional scenario argument
+    inject_news = '--inject-news' in sys.argv
+    injected_news = None
+    scenario = 'confirms'
+    if inject_news:
+        if not test_mode:
+            print("[--inject-news] Aborting: --inject-news can only be used with --test")
+            sys.exit(1)
+        idx = sys.argv.index('--inject-news')
+        next_arg = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else None
+        if next_arg and not next_arg.startswith('--'):
+            scenario = next_arg
+
     # Check for debug mode
     if '--debug' in sys.argv:
         from datetime import date
@@ -156,11 +172,19 @@ def main():
         sys.exit(1)
 
     print(f"✓ Found {len(users)} user(s)")
-    
+
+    # Load and validate injected news if flag is set
+    if inject_news:
+        from utils.news_injector import validate_injected_news
+        all_symbols = [s for user in users for s in get_watchlist(user.id)]
+        injected_news = load_injected_news()
+        validate_injected_news(all_symbols, injected_news)
+        print(f"[--inject-news] Running scenario '{scenario}' for {len(injected_news)} symbols")
+
     # Process each user
     results = []
     for user in users:
-        success = process_user(user, test_mode=test_mode)
+        success = process_user(user, test_mode=test_mode, injected_news=injected_news, scenario=scenario)
         results.append(success)
     
     # Summary
