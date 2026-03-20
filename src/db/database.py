@@ -17,7 +17,9 @@ from sqlalchemy.orm import sessionmaker
 
 from db.models import Base, User, Watchlist, Thesis, NewsArticle
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///data/opening_bell.db')
+_test_mode = os.getenv('TEST_MODE', 'false').lower() == 'true'
+_default_db = 'sqlite:///data/opening_bell_test.db' if _test_mode else 'sqlite:///data/opening_bell.db'
+DATABASE_URL = os.getenv('DATABASE_URL', _default_db)
 
 # SQLite requires check_same_thread=False; Postgres does not accept it
 _connect_args = {'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {}

@@ -6,9 +6,14 @@ Fetches stock data, generates AI summaries, and emails daily digest
 
 import os
 import sys
-from fetch_data import fetch_all_data
-from summarize import generate_digest
-from send_email import send_digest_email
+
+# Set TEST_MODE before any imports so db.database picks the right DB file
+if '--test' in sys.argv or '-t' in sys.argv:
+    os.environ['TEST_MODE'] = 'true'
+
+from stock.fetch_data import fetch_all_data
+from stock.summarize import generate_digest
+from utils.send_email import send_digest_email
 from thesis.thesis_agent import ThesisAgent
 from utils.debug import set_debug
 from utils.news_injector import load_injected_news, validate_injected_news
@@ -131,8 +136,6 @@ def main():
     
     # Check for test mode
     test_mode = '--test' in sys.argv or '-t' in sys.argv
-    if test_mode:
-        os.environ['TEST_MODE'] = 'true'
 
     # Check for news injection flag and optional scenario argument
     inject_news = '--inject-news' in sys.argv
@@ -199,7 +202,7 @@ def main():
         print(f"⚠️  {successful}/{total} digest(s) sent successfully")
     
     # Show rate limit stats
-    from summarize import _get_provider
+    from stock.summarize import _get_provider
     provider = _get_provider()
     if hasattr(provider, 'rate_limiter'):
         stats = provider.rate_limiter.get_stats()

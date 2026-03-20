@@ -1,8 +1,8 @@
 import yfinance as yf
 from datetime import datetime, timedelta, timezone
 import json
-from fetch_news import fetch_stock_news
-from fetch_earnings import fetch_earnings_data
+from stock.fetch_news import fetch_stock_news
+from stock.fetch_earnings import fetch_earnings_data
 from stock.cache import stock_cache
 from stock.news_enricher import enrich_articles
 from db.queries import get_recent_articles, save_articles
@@ -16,7 +16,7 @@ def load_watchlist(filepath='data/watchlist.json'):
     except FileNotFoundError:
         print(f"Watchlist not found at {filepath}")
         return []
-    
+
 def load_users(filepath='data/users.json'):
     """Load all users and their watchlists"""
     try:
@@ -31,24 +31,24 @@ def fetch_stock_data(symbol):
     """Fetch current price, change, and basic info for a stock"""
     try:
         ticker = yf.Ticker(symbol)
-        
+
         # Try using history for price data - most reliable
         hist = ticker.history(period="2d")
         if hist.empty:
             print(f"  No price data for {symbol}")
             return None
-            
+
         current_price = hist['Close'].iloc[-1]
         previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
         change_percent = ((current_price - previous_close) / previous_close) * 100
-        
+
         # Get basic info
         try:
             info = ticker.info
             name = info.get('longName', info.get('shortName', symbol))
         except:
             name = symbol
-        
+
         return {
             'symbol': symbol,
             'name': name,
@@ -98,29 +98,29 @@ def _fetch_news_with_cache(symbol: str, company_name: str) -> list:
 def fetch_all_data(watchlist):
     """Fetch data, news, and earnings for all stocks in watchlist"""
     results = []
-    
+
     for symbol in watchlist:
         print(f"Fetching data for {symbol}...")
-        
+
         stock_data = fetch_stock_data(symbol)
         if stock_data:
             stock_data['news'] = _fetch_news_with_cache(symbol, stock_data['name'])
             stock_data['earnings'] = fetch_earnings_data(symbol)
             stock_cache.store(symbol, stock_data['info'], stock_data['news'], stock_data['history'])
             results.append(stock_data)
-    
+
     return results
 
 if __name__ == "__main__":
     # Test the fetcher
     watchlist = load_watchlist()
-    
+
     if not watchlist:
         print("No stocks in watchlist. Add some to data/watchlist.json")
         print("Example format: {\"symbols\": [\"AAPL\", \"GOOGL\", \"MSFT\"]}")
     else:
         data = fetch_all_data(watchlist)
-        
+
         # Pretty print results
         for stock in data:
             print(f"\n{'='*50}")

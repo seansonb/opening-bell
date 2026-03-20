@@ -15,16 +15,15 @@ load_dotenv()
 # Allow imports from src/ when running directly
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from llm_providers import LLMProvider, get_provider
+from llm.llm_providers import LLMProvider, get_provider
 from thesis.thesis_manager import _parse_frontmatter
 from stock.cache import stock_cache
 from utils.debug import debug_log
 from db.queries import get_thesis, save_verdict
 from utils.news_injector import get_injected_articles
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-from fetch_news import fetch_stock_news
-from fetch_earnings import fetch_earnings_data
+from stock.fetch_news import fetch_stock_news
+from stock.fetch_earnings import fetch_earnings_data
 
 DEFAULT_LLM_PROVIDER = 'claude'
 

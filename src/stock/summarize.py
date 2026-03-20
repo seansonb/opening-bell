@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from llm_providers import get_provider
+from llm.llm_providers import get_provider
 from utils.debug import debug_log
 
 # Load environment variables
@@ -33,7 +33,7 @@ def format_earnings_data(earnings):
     """Format earnings data for LLM prompt"""
     if not earnings:
         return None
-    
+
     def fmt_num(val, prefix='$', suffix='', is_pct=False):
         if val is None:
             return 'N/A'
@@ -44,9 +44,9 @@ def format_earnings_data(earnings):
         if prefix == '$' and val > 1e6:
             return f"${val/1e6:.2f}M"
         return f"{prefix}{val:.2f}{suffix}"
-    
+
     sections = []
-    
+
     # Core Financials
     core = f"""CORE FINANCIALS:
 - Revenue: {fmt_num(earnings.get('revenue'))} (YoY Growth: {fmt_num(earnings.get('revenue_yoy_growth'), '', '', True)})
@@ -60,7 +60,7 @@ def format_earnings_data(earnings):
 - Free Cash Flow: {fmt_num(earnings.get('free_cash_flow'))}
 - Operating Cash Flow: {fmt_num(earnings.get('operating_cash_flow'))}"""
     sections.append(core)
-    
+
     # Balance Sheet
     balance = f"""BALANCE SHEET:
 - Total Cash: {fmt_num(earnings.get('total_cash'))}
@@ -68,7 +68,7 @@ def format_earnings_data(earnings):
 - Current Ratio: {fmt_num(earnings.get('current_ratio'), '')}
 - Quick Ratio: {fmt_num(earnings.get('quick_ratio'), '')}"""
     sections.append(balance)
-    
+
     # Valuation
     valuation = f"""VALUATION:
 - Market Cap: {fmt_num(earnings.get('market_cap'))}
@@ -79,7 +79,7 @@ def format_earnings_data(earnings):
 - EV/EBITDA: {fmt_num(earnings.get('ev_to_ebitda'), '')}
 - Revenue per Share: {fmt_num(earnings.get('revenue_per_share'), '$')}"""
     sections.append(valuation)
-    
+
     # Earnings Performance
     if earnings.get('reported_eps') or earnings.get('estimated_eps'):
         performance = f"""EARNINGS PERFORMANCE:
@@ -87,7 +87,7 @@ def format_earnings_data(earnings):
 - Expected EPS: {fmt_num(earnings.get('estimated_eps'), '$')}
 - Surprise: {fmt_num(earnings.get('surprise'), '', '%', False)}"""
         sections.append(performance)
-    
+
     # Analyst Guidance
     if earnings.get('target_mean_price'):
         guidance = f"""ANALYST GUIDANCE:
@@ -95,7 +95,7 @@ def format_earnings_data(earnings):
 - Mean Target: {fmt_num(earnings.get('target_mean_price'), '$')}
 - Recommendation: {earnings.get('recommendation', 'N/A').upper()}"""
         sections.append(guidance)
-    
+
     return "\n\n".join(sections)
 
 def summarize_stock_news(stock_data):
@@ -131,7 +131,7 @@ def summarize_stock_news(stock_data):
     # Check if there's earnings data
     has_earnings = earnings is not None
     earnings_text = format_earnings_data(earnings) if has_earnings else ""
-    
+
     # Build context for the LLM
     if news or has_earnings:
         prompt_parts = [f"""You are a financial analyst providing daily stock updates.
@@ -139,14 +139,14 @@ def summarize_stock_news(stock_data):
 Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%"""]
-        
+
         if has_earnings:
             prompt_parts.append(f"""
 EARNINGS REPORT (Recent):
 Earnings Date: {earnings.get('earnings_date')}
 
 {earnings_text}""")
-        
+
         if news:
             news_text = ""
             for i, article in enumerate(news, 1):
@@ -156,10 +156,10 @@ Earnings Date: {earnings.get('earnings_date')}
             prompt_parts.append(f"""
 Recent News:
 {news_text}""")
-        
+
         prompt_parts.append("""
 Provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.""")
-        
+
         if has_earnings:
             prompt_parts.append("""
 Focus on:
@@ -177,7 +177,7 @@ Focus on:
 3. What investors should watch for
 
 Be concise, factual, and actionable. No fluff.""")
-        
+
         prompt = "\n".join(prompt_parts)
 
     else:
@@ -219,23 +219,23 @@ def build_stock_prompt(stock_data):
     change = stock_data['change_percent']
     news = stock_data['news']
     earnings = stock_data.get('earnings')
-    
+
     has_earnings = earnings is not None
     earnings_text = format_earnings_data(earnings) if has_earnings else ""
-    
+
     # Build context for the LLM (same as individual prompt)
     if news or has_earnings:
         prompt_parts = [f"""Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%"""]
-        
+
         if has_earnings:
             prompt_parts.append(f"""
 EARNINGS REPORT (Recent):
 Earnings Date: {earnings.get('earnings_date')}
 
 {earnings_text}""")
-        
+
         if news:
             news_text = ""
             for i, article in enumerate(news, 1):
@@ -245,7 +245,7 @@ Earnings Date: {earnings.get('earnings_date')}
             prompt_parts.append(f"""
 Recent News:
 {news_text}""")
-        
+
         if has_earnings:
             prompt_parts.append("""
 Focus on:
@@ -263,9 +263,9 @@ Focus on:
 3. What investors should watch for
 
 Be concise, factual, and actionable. No fluff.""")
-        
+
         return "\n".join(prompt_parts)
-        
+
     else:
         return f"""Stock: {name} ({symbol})
 Current Price: ${price:.2f}
@@ -283,33 +283,33 @@ Be concise and factual. Mention that no news was available."""
 def generate_market_summary():
     """Generate a brief macro market summary using the latest market data"""
     global _market_summary_cache
-    
+
     # Return cached version if available
     if _market_summary_cache is not None:
         print("  Using cached market overview...")
         return _market_summary_cache
-    
+
     try:
         import yfinance as yf
-        
+
         # Get major indices
         spy = yf.Ticker("SPY")  # S&P 500
         qqq = yf.Ticker("QQQ")  # Nasdaq
         dia = yf.Ticker("DIA")  # Dow
-        
+
         # Get today's data
         spy_hist = spy.history(period="2d")
         qqq_hist = qqq.history(period="2d")
         dia_hist = dia.history(period="2d")
-        
+
         if spy_hist.empty or qqq_hist.empty or dia_hist.empty:
             return None
-        
+
         # Calculate changes
         spy_change = ((spy_hist['Close'].iloc[-1] - spy_hist['Close'].iloc[-2]) / spy_hist['Close'].iloc[-2]) * 100
         qqq_change = ((qqq_hist['Close'].iloc[-1] - qqq_hist['Close'].iloc[-2]) / qqq_hist['Close'].iloc[-2]) * 100
         dia_change = ((dia_hist['Close'].iloc[-1] - dia_hist['Close'].iloc[-2]) / dia_hist['Close'].iloc[-2]) * 100
-        
+
         # Build prompt for macro summary
         prompt = f"""You are a financial analyst providing a brief market overview.
 
@@ -334,12 +334,12 @@ DO NOT use a preamble. Start directly with the market analysis."""
             'dia_change': dia_change,
             'summary': summary_text.strip()
         }
-        
+
         # Cache the result
         _market_summary_cache = market_summary
-        
+
         return market_summary
-        
+
     except Exception as e:
         print(f"  Could not generate market summary: {e}")
         return None
@@ -347,24 +347,24 @@ DO NOT use a preamble. Start directly with the market analysis."""
 def generate_digest(stocks_data, batch_size=10, user_name=None):
     """
     Generate a complete daily digest for all stocks using batched API calls
-    
+
     Args:
         stocks_data: List of stock data dicts
         batch_size: Number of stocks to process per API call (default 10)
         user_name: Optional name for personalized greeting
-    
+
     Returns:
         Complete formatted digest string
     """
     from datetime import datetime
-    
+
     if not stocks_data:
         return ""
-    
+
     # Get current time for greeting
     now = datetime.now()
     hour = now.hour
-    
+
     # Determine greeting
     if hour < 12:
         greeting = "Good morning"
@@ -372,12 +372,12 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
         greeting = "Good afternoon"
     else:
         greeting = "Good evening"
-    
+
     if user_name:
         greeting = f"{greeting}, {user_name}!"
     else:
         greeting = f"{greeting}!"
-    
+
     # Build digest header with title first, then personalized greeting
     digest_parts = [
         f"**Daily Stock Digest - {now.strftime('%A, %B %d, %Y')}**",
@@ -387,11 +387,11 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
         "=" * 60,
         ""
     ]
-    
+
     # Add market summary
     print("  Generating market overview...")
     market_data = generate_market_summary()
-    
+
     if market_data:
         digest_parts.append("**Market Overview**")
         digest_parts.append("")
@@ -399,12 +399,12 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
         digest_parts.append("")
         digest_parts.append(market_data['summary'])
         digest_parts.append("")
-    
+
     digest_parts.append("=" * 60)
     digest_parts.append("")
-    
+
     digest_header = "\n".join(digest_parts)
-    
+
     all_summaries = []
     provider = _get_provider()
 
@@ -461,36 +461,36 @@ STOCKS TO ANALYZE:
             print(f"  Processing stock {i}/{len(stocks_data)}: {stock_data['symbol']}...")
             summary = summarize_stock_news(stock_data)
             all_summaries.append(summary + "\n" + "-" * 60 + "\n")
-    
+
     # Combine all summaries
     digest = digest_header + "\n\n".join(all_summaries)
-    
+
     # Add dashed separators between stocks
     digest = digest.replace("---\n\n**", "-" * 60 + "\n\n**")
-    
+
     return digest
 
 def generate_digest_fallback(stocks_data):
     """Fallback: generate digest with individual API calls"""
     from datetime import datetime
-    
+
     digest = f"# Daily Stock Digest - {datetime.now().strftime('%B %d, %Y')}\n\n"
     digest += "=" * 60 + "\n\n"
-    
+
     for stock_data in stocks_data:
         summary = summarize_stock_news(stock_data)
         digest += summary + "\n" + "-" * 60 + "\n\n"
-    
+
     return digest
 
 if __name__ == "__main__":
     # Test with sample data
-    from fetch_data import load_watchlist, fetch_all_data
-    
+    from stock.fetch_data import load_watchlist, fetch_all_data
+
     print("Fetching stock data...")
     watchlist = load_watchlist()
     stocks_data = fetch_all_data(watchlist[:2])  # Test with first 2 stocks
-    
+
     print("\nGenerating summaries...\n")
     digest = generate_digest(stocks_data)
     print(digest)

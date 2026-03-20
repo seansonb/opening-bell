@@ -4,7 +4,7 @@ LLM Provider abstraction for supporting multiple AI services
 
 import os
 from abc import ABC, abstractmethod
-from rate_limiter import RateLimiter
+from utils.rate_limiter import RateLimiter
 
 
 class LLMProvider(ABC):

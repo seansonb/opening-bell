@@ -10,45 +10,45 @@ load_dotenv()
 def send_digest_email(digest_content, recipient_email=None):
     """
     Send the daily digest via email
-    
+
     Args:
         digest_content: String containing the full digest
         recipient_email: Optional email override (defaults to env variable)
     """
-    
+
     # Email configuration from environment variables
     sender_email = os.getenv('SENDER_EMAIL')
     sender_password = os.getenv('SENDER_PASSWORD')
     recipient = recipient_email or os.getenv('RECIPIENT_EMAIL', sender_email)
-    
+
     if not sender_email or not sender_password:
         raise ValueError("SENDER_EMAIL and SENDER_PASSWORD must be set in .env file")
-    
+
     # Create message
     msg = MIMEMultipart('alternative')
     msg['Subject'] = f"Daily Stock Digest - {datetime.now().strftime('%B %d, %Y')}"
     msg['From'] = sender_email
     msg['To'] = recipient
-    
+
     # Convert markdown-style formatting to HTML
     html_content = markdown_to_html(digest_content)
-    
+
     # Attach both plain text and HTML versions
     text_part = MIMEText(digest_content, 'plain')
     html_part = MIMEText(html_content, 'html')
-    
+
     msg.attach(text_part)
     msg.attach(html_part)
-    
+
     try:
         # Connect to Gmail's SMTP server
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(sender_email, sender_password)
             server.send_message(msg)
-        
+
         print(f"✓ Digest email sent successfully to {recipient}")
         return True
-    
+
     except Exception as e:
         print(f"✗ Error sending email: {e}")
         return False
@@ -58,19 +58,19 @@ def markdown_to_html(content):
     Simple markdown to HTML converter for email formatting
     """
     html = content
-    
+
     # Convert headers
     html = html.replace('# ', '<h1>').replace('\n\n', '</h1>\n\n', 1)
-    
+
     # Convert bold
     import re
     html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
-    
+
     # Convert line breaks and separators
     html = html.replace('\n\n', '<br><br>')
     html = html.replace('=' * 60, '<hr>')
     html = html.replace('-' * 60, '<hr style="border: 1px dashed #ccc;">')
-    
+
     # Wrap in HTML template
     html_template = f"""
     <html>
@@ -87,7 +87,7 @@ def markdown_to_html(content):
     </body>
     </html>
     """
-    
+
     return html_template
 
 if __name__ == "__main__":
@@ -108,6 +108,6 @@ Microsoft reported quarterly earnings that slightly missed expectations.
 
 ------------------------------------------------------------
 """
-    
+
     print("Sending test email...")
     send_digest_email(test_digest)
