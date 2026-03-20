@@ -96,7 +96,7 @@ These specific developments would force a re-evaluation:
   requires execution on multiple simultaneous bets.
 
 ## Current Conviction
-Level: Medium — Watching, not yet a core position
+Level: High
 Rationale: The product narrative is genuinely compelling and the demographic 
 tailwind is structural. But the stock is down ~52% from highs on a combination 
 of crypto cyclicality and real expense growth concerns. Needs a cleaner Q that 

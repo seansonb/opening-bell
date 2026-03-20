@@ -58,7 +58,7 @@ def _build_thesis_section(updates):
     for u in updates:
         lines.append(f"**{u.ticker}** — {u.verdict}")
         lines.append("")
-        lines.append(u.summary)
+        lines.append(u.detail)
         lines.append("")
         lines.append("-" * 60)
         lines.append("")

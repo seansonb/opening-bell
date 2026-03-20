@@ -3,9 +3,10 @@
     {
       "name": "Sean",
       "email": "spawn.of.sean@gmail.com",
+      "theses_dir": "theses/test",
       "symbols": [
         "HUBS",
-        "NOW"
+        "HOOD"
       ]
     }
   ]

@@ -40,6 +40,7 @@ class ThesisUpdate:
     ticker: str
     verdict: str
     summary: str
+    detail: str
     suggested_log_entry: str
     is_significant: bool
 
@@ -216,12 +217,14 @@ class ThesisAgent:
 
         verdict = data.get('verdict', 'NEUTRAL')
         summary = data.get('summary', '')
+        detail = data.get('detail', '')
         save_verdict(thesis_obj.id, verdict, summary)
 
         return ThesisUpdate(
             ticker=ticker,
             verdict=verdict,
             summary=summary,
+            detail=detail,
             suggested_log_entry=data.get('suggested_log_entry', ''),
             is_significant=verdict in SIGNIFICANT_VERDICTS,
         )
