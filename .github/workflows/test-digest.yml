@@ -36,8 +36,7 @@ jobs:
         SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
       run: |
-        python src/main.py --users users_test.json
+        python src/main.py --test
 
     - name: Upload DB artifact
       uses: actions/upload-artifact@v4
-      
