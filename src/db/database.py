@@ -68,12 +68,15 @@ def seed_users() -> None:
                 continue
 
             # Upsert user
+            theses_dir = user_data.get('theses_dir')
             user = session.query(User).filter_by(email=email).first()
             if not user:
-                user = User(name=user_data['name'], email=email)
+                user = User(name=user_data['name'], email=email, theses_dir=theses_dir)
                 session.add(user)
                 session.flush()
                 print(f"  [db] Seeded user: {user.name} ({email})")
+            elif user.theses_dir != theses_dir:
+                user.theses_dir = theses_dir
 
             # Upsert watchlist symbols
             existing_symbols = {w.symbol for w in user.watchlist}
@@ -89,45 +92,46 @@ def seed_users() -> None:
 
 def _seed_theses() -> None:
     """
-    Scan theses/*.md and seed Thesis rows for users who have the symbol
-    in their watchlist. Always reads from the main theses/ directory.
+    For each user, scan their theses_dir (or the global theses/ fallback) for .md files.
+    Upsert a Thesis row for each file whose stem matches a symbol in the user's watchlist.
     """
-    theses_dir = os.path.join(_PROJECT_ROOT, 'theses')
-    pattern = os.path.join(theses_dir, '*.md')
+    global_theses_dir = os.path.join(_PROJECT_ROOT, 'theses')
 
     with get_session() as session:
-        for path in glob.glob(pattern):
-            filename = os.path.basename(path)
-            if filename.startswith('_'):
-                continue
+        users = session.query(User).all()
 
-            symbol = os.path.splitext(filename)[0].upper()
+        for user in users:
+            scan_dir = os.path.join(_PROJECT_ROOT, user.theses_dir) if user.theses_dir else global_theses_dir
+            pattern = os.path.join(scan_dir, '*.md')
 
-            try:
-                with open(path, 'r') as f:
-                    content = f.read()
-            except Exception as e:
-                print(f"  [db] Could not read thesis file {path}: {e}")
-                continue
+            user_symbols = {w.symbol for w in user.watchlist}
 
-            # Find users with this symbol in their watchlist
-            watchlist_rows = (
-                session.query(Watchlist)
-                .filter_by(symbol=symbol)
-                .all()
-            )
+            for path in glob.glob(pattern):
+                filename = os.path.basename(path)
+                if filename.startswith('_'):
+                    continue
 
-            for wl in watchlist_rows:
-                exists = session.query(Thesis).filter_by(
-                    user_id=wl.user_id, symbol=symbol
+                symbol = os.path.splitext(filename)[0].upper()
+                if symbol not in user_symbols:
+                    continue
+
+                try:
+                    with open(path, 'r') as f:
+                        content = f.read()
+                except Exception as e:
+                    print(f"  [db] Could not read thesis file {path}: {e}")
+                    continue
+
+                existing = session.query(Thesis).filter_by(
+                    user_id=user.id, symbol=symbol
                 ).first()
-                if not exists:
-                    session.add(Thesis(
-                        user_id=wl.user_id,
-                        symbol=symbol,
-                        content=content,
-                    ))
-                    print(f"  [db] Seeded thesis: {symbol} for user_id={wl.user_id}")
+                if existing:
+                    if existing.content != content:
+                        existing.content = content
+                        print(f"  [db] Updated thesis: {symbol} for user_id={user.id}")
+                else:
+                    session.add(Thesis(user_id=user.id, symbol=symbol, content=content))
+                    print(f"  [db] Seeded thesis: {symbol} for user_id={user.id}")
 
         session.commit()
 

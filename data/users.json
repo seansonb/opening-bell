@@ -3,6 +3,7 @@
     {
       "name": "Sean",
       "email": "spawn.of.sean@gmail.com",
+      "theses_dir": "theses/sean",
       "symbols": [
         "NOW",
         "HOOD",
@@ -58,6 +59,18 @@
         "SHOP",
         "ORCL",
         "SPOT",
+        "NOW"
+      ]
+    },
+    {
+      "name": "Terry",
+      "email": "terryfelthaus@gmail.com",
+      "theses_dir": "theses/terry",
+      "symbols": [
+        "HOOD",
+        "RKLB",
+        "RCAT",
+        "PLTR",
         "NOW"
       ]
     }
