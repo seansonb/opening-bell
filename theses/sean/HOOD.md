@@ -1,6 +1,6 @@
 ---
 ticker: HOOD
-status: watching
+status: holding
 sector_theses: [fintech_superapp_thesis]
 macro_theses: [crypto_regulatory_tailwind, great_wealth_transfer]
 ---

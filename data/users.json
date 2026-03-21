@@ -33,6 +33,7 @@
     {
       "name": "Sid",
       "email": "sidsteinberg1@gmail.com",
+      "theses_dir": "theses/sid",
       "symbols": [
         "META",
         "GOOG",
