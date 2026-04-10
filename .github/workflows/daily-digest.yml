@@ -2,10 +2,10 @@ name: Daily Stock Digest
 
 on:
   schedule:
-    # Run at 9:00 AM ET (30 minutes before market opens)
-    # Cron is in UTC, so 9:00 AM ET = 2:00 PM UTC (14:00)
-    # Note: Adjust for daylight saving time if needed
-    - cron: '0 13 * * 1-5'  # Monday-Friday at 2:00 PM UTC (9:00 AM ET)
+    # Run at 8:30 AM ET (1 hour before market opens at 9:30 AM ET)
+    # Cron is in UTC; during EDT (UTC-4): 8:30 AM ET = 12:30 PM UTC
+    # Note: During EST (UTC-5, ~Nov-Mar) this runs at 7:30 AM ET
+    - cron: '30 12 * * 1-5'  # Monday-Friday at 12:30 PM UTC (8:30 AM EDT)
   
   # Allow manual trigger for testing
   workflow_dispatch:
