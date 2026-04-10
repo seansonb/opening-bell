@@ -98,12 +98,13 @@ def format_earnings_data(earnings):
 
     return "\n\n".join(sections)
 
-def summarize_stock_news(stock_data):
+def summarize_stock_news(stock_data, market_context=None):
     """
     Generate a summary for a single stock's news and earnings
 
     Args:
         stock_data: Dict with keys: symbol, name, current_price, change_percent, news, earnings
+        market_context: Optional dict with spy_change, qqq_change, dia_change, summary
 
     Returns:
         String summary of the stock's news, earnings, and performance
@@ -157,6 +158,14 @@ Earnings Date: {earnings.get('earnings_date')}
 Recent News:
 {news_text}""")
 
+        if market_context:
+            prompt_parts.append(f"""
+Today's Market Context:
+- S&P 500: {market_context['spy_change']:+.2f}%
+- Nasdaq: {market_context['qqq_change']:+.2f}%
+- Dow Jones: {market_context['dia_change']:+.2f}%
+- Overview: {market_context['summary']}""")
+
         prompt_parts.append("""
 Provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.""")
 
@@ -181,12 +190,21 @@ Be concise, factual, and actionable. No fluff.""")
         prompt = "\n".join(prompt_parts)
 
     else:
+        market_section = ""
+        if market_context:
+            market_section = f"""
+Today's Market Context:
+- S&P 500: {market_context['spy_change']:+.2f}%
+- Nasdaq: {market_context['qqq_change']:+.2f}%
+- Dow Jones: {market_context['dia_change']:+.2f}%
+- Overview: {market_context['summary']}
+"""
         prompt = f"""You are a financial analyst providing daily stock updates.
 
 Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%
-
+{market_section}
 No news articles or earnings reports were published recently for this stock.
 
 Provide a 3-4 sentence summary analyzing the stock's performance. DO NOT include any preamble. Start directly with analysis. Cover:
@@ -211,7 +229,7 @@ Be concise and factual. Mention that no news was available."""
         print(f"Error generating summary for {symbol}: {e}")
         return f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\nError generating summary.\n"
 
-def build_stock_prompt(stock_data):
+def build_stock_prompt(stock_data, market_context=None):
     """Build the detailed prompt for a single stock (same logic as summarize_stock_news)"""
     symbol = stock_data['symbol']
     name = stock_data['name']
@@ -246,6 +264,14 @@ Earnings Date: {earnings.get('earnings_date')}
 Recent News:
 {news_text}""")
 
+        if market_context:
+            prompt_parts.append(f"""
+Today's Market Context:
+- S&P 500: {market_context['spy_change']:+.2f}%
+- Nasdaq: {market_context['qqq_change']:+.2f}%
+- Dow Jones: {market_context['dia_change']:+.2f}%
+- Overview: {market_context['summary']}""")
+
         if has_earnings:
             prompt_parts.append("""
 Focus on:
@@ -267,10 +293,19 @@ Be concise, factual, and actionable. No fluff.""")
         return "\n".join(prompt_parts)
 
     else:
+        market_section = ""
+        if market_context:
+            market_section = f"""
+Today's Market Context:
+- S&P 500: {market_context['spy_change']:+.2f}%
+- Nasdaq: {market_context['qqq_change']:+.2f}%
+- Dow Jones: {market_context['dia_change']:+.2f}%
+- Overview: {market_context['summary']}
+"""
         return f"""Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%
-
+{market_section}
 No news articles or earnings reports were published recently for this stock.
 
 Cover:
@@ -417,8 +452,18 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
             print(f"  Processing batch {i//batch_size + 1} ({len(batch)} stocks)...")
 
             # Build prompt using the same detailed logic as individual summaries
-            batch_prompt = f"""You are a financial analyst providing daily stock updates.
+            market_section = ""
+            if market_data:
+                market_section = f"""
+Today's Market Context:
+- S&P 500: {market_data['spy_change']:+.2f}%
+- Nasdaq: {market_data['qqq_change']:+.2f}%
+- Dow Jones: {market_data['dia_change']:+.2f}%
+- Overview: {market_data['summary']}
 
+"""
+            batch_prompt = f"""You are a financial analyst providing daily stock updates.
+{market_section}
 For EACH stock below, provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.
 
 Format EACH stock exactly as:
@@ -440,7 +485,7 @@ STOCKS TO ANALYZE:
             # Add each stock with its detailed prompt
             stock_prompts = []
             for stock_data in batch:
-                stock_prompt = build_stock_prompt(stock_data)
+                stock_prompt = build_stock_prompt(stock_data, market_context=market_data)
                 stock_prompts.append(stock_prompt + "\n\n" + "="*60)
 
             batch_prompt += "\n".join(stock_prompts)
@@ -452,14 +497,14 @@ STOCKS TO ANALYZE:
                 print(f"  Error in batch {i//batch_size + 1}: {e}")
                 # Fallback to individual for this batch
                 for stock_data in batch:
-                    summary = summarize_stock_news(stock_data)
+                    summary = summarize_stock_news(stock_data, market_context=market_data)
                     all_summaries.append(summary + "\n" + "-" * 60 + "\n")
     else:
         # CLAUDE PATH: Process stocks one at a time
         print(f"  Processing {len(stocks_data)} stocks individually...")
         for i, stock_data in enumerate(stocks_data, 1):
             print(f"  Processing stock {i}/{len(stocks_data)}: {stock_data['symbol']}...")
-            summary = summarize_stock_news(stock_data)
+            summary = summarize_stock_news(stock_data, market_context=market_data)
             all_summaries.append(summary + "\n" + "-" * 60 + "\n")
 
     # Combine all summaries
