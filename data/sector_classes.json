@@ -1,0 +1,239 @@
+{
+  "SaaS": {
+    "etf": "IGV",
+    "industries": [
+      "Software - Application",
+      "Software - Infrastructure",
+      "Information Technology Services"
+    ]
+  },
+  "Semiconductors": {
+    "etf": "SOXX",
+    "industries": [
+      "Semiconductors",
+      "Semiconductor Equipment & Materials"
+    ]
+  },
+  "Hardware & Electronics": {
+    "etf": "XLK",
+    "industries": [
+      "Computer Hardware",
+      "Electronic Components",
+      "Consumer Electronics",
+      "Electronics & Computer Distribution",
+      "Communication Equipment"
+    ]
+  },
+  "Internet": {
+    "etf": "FDN",
+    "industries": [
+      "Internet Content & Information",
+      "Internet Retail"
+    ]
+  },
+  "Biotech": {
+    "etf": "XBI",
+    "industries": [
+      "Biotechnology",
+      "Diagnostics & Research"
+    ]
+  },
+  "Pharma": {
+    "etf": "XPH",
+    "industries": [
+      "Drug Manufacturers - General",
+      "Drug Manufacturers - Specialty & Generic"
+    ]
+  },
+  "Medical Devices": {
+    "etf": "IHI",
+    "industries": [
+      "Medical Devices",
+      "Medical Instruments & Supplies"
+    ]
+  },
+  "Healthcare Services": {
+    "etf": "XLV",
+    "industries": [
+      "Healthcare Plans",
+      "Health Care Plans",
+      "Health Information Services",
+      "Medical Care Facilities"
+    ]
+  },
+  "Banks": {
+    "etf": "KBE",
+    "industries": [
+      "Banks - Diversified"
+    ]
+  },
+  "Regional Banks": {
+    "etf": "KRE",
+    "industries": [
+      "Banks - Regional"
+    ]
+  },
+  "Fintech": {
+    "etf": "FINX",
+    "industries": [
+      "Credit Services",
+      "Financial Data & Stock Exchanges",
+      "Insurance - Specialty"
+    ]
+  },
+  "Financial Services": {
+    "etf": "XLF",
+    "industries": [
+      "Asset Management",
+      "Capital Markets",
+      "Insurance - Life",
+      "Insurance - Property & Casualty",
+      "Insurance - Diversified",
+      "Mortgage Finance",
+      "Financial Conglomerates"
+    ]
+  },
+  "Energy": {
+    "etf": "XLE",
+    "industries": [
+      "Oil & Gas E&P",
+      "Oil & Gas Integrated",
+      "Oil & Gas Midstream",
+      "Oil & Gas Refining & Marketing",
+      "Oil & Gas Equipment & Services"
+    ]
+  },
+  "Clean Energy": {
+    "etf": "ICLN",
+    "industries": [
+      "Solar",
+      "Utilities - Renewable",
+      "Utilities - Independent Power Producers"
+    ]
+  },
+  "Utilities": {
+    "etf": "XLU",
+    "industries": [
+      "Utilities - Regulated Electric",
+      "Utilities - Regulated Gas",
+      "Utilities - Regulated Water",
+      "Utilities - Diversified"
+    ]
+  },
+  "Defense": {
+    "etf": "ITA",
+    "industries": [
+      "Aerospace & Defense"
+    ]
+  },
+  "Airlines": {
+    "etf": "JETS",
+    "industries": [
+      "Airlines"
+    ]
+  },
+  "Retail": {
+    "etf": "XRT",
+    "industries": [
+      "Specialty Retail",
+      "Department Stores",
+      "Apparel Retail",
+      "Home Improvement Retail",
+      "Auto & Truck Dealerships",
+      "Grocery Stores",
+      "Food Distribution"
+    ]
+  },
+  "Consumer Discretionary": {
+    "etf": "XLY",
+    "industries": [
+      "Auto Manufacturers",
+      "Restaurants",
+      "Travel & Leisure",
+      "Lodging",
+      "Resorts & Casinos",
+      "Apparel Manufacturing",
+      "Footwear & Accessories",
+      "Leisure",
+      "Personal Services"
+    ]
+  },
+  "Consumer Staples": {
+    "etf": "XLP",
+    "industries": [
+      "Household & Personal Products",
+      "Beverages - Non-Alcoholic",
+      "Beverages - Alcoholic",
+      "Packaged Foods",
+      "Tobacco",
+      "Farm Products",
+      "Agricultural Inputs"
+    ]
+  },
+  "REITs": {
+    "etf": "XLRE",
+    "industries": [
+      "REIT - Office",
+      "REIT - Residential",
+      "REIT - Retail",
+      "REIT - Industrial",
+      "REIT - Healthcare Facilities",
+      "REIT - Data Center",
+      "REIT - Hotel & Motel",
+      "REIT - Mortgage",
+      "REIT - Diversified",
+      "Real Estate Services",
+      "Real Estate - Development",
+      "Real Estate - Diversified"
+    ]
+  },
+  "Telecom & Media": {
+    "etf": "XLC",
+    "industries": [
+      "Telecom Services",
+      "Entertainment",
+      "Broadcasting",
+      "Electronic Gaming & Multimedia",
+      "Advertising Agencies",
+      "Publishing",
+      "Social Media"
+    ]
+  },
+  "Materials": {
+    "etf": "XLB",
+    "industries": [
+      "Steel",
+      "Chemicals",
+      "Specialty Chemicals",
+      "Aluminum",
+      "Copper",
+      "Paper & Paper Products",
+      "Building Materials",
+      "Packaging & Containers"
+    ]
+  },
+  "Gold & Precious Metals": {
+    "etf": "GDX",
+    "industries": [
+      "Gold",
+      "Silver",
+      "Other Precious Metals & Mining"
+    ]
+  },
+  "Industrials": {
+    "etf": "XLI",
+    "industries": [
+      "Industrial Machinery",
+      "Construction & Engineering",
+      "Electrical Equipment & Parts",
+      "Trucking",
+      "Railroads",
+      "Farm & Heavy Construction Machinery",
+      "Rental & Leasing Services",
+      "Staffing & Employment Services",
+      "Waste Management",
+      "Security & Protection Services",
+      "Conglomerates"
+    ]
+  }
+}
