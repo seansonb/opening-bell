@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from llm.llm_providers import get_provider
 from utils.debug import debug_log
+from stock.fetch_sector import get_sector_class, fetch_sector_context, clear_sector_cache
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +29,7 @@ def clear_summary_cache():
     global _stock_summary_cache, _market_summary_cache
     _stock_summary_cache.clear()
     _market_summary_cache = None
+    clear_sector_cache()
 
 def format_earnings_data(earnings):
     """Format earnings data for LLM prompt"""
@@ -98,13 +100,14 @@ def format_earnings_data(earnings):
 
     return "\n\n".join(sections)
 
-def summarize_stock_news(stock_data, market_context=None):
+def summarize_stock_news(stock_data, market_context=None, sector_context=None):
     """
     Generate a summary for a single stock's news and earnings
 
     Args:
         stock_data: Dict with keys: symbol, name, current_price, change_percent, news, earnings
         market_context: Optional dict with spy_change, qqq_change, dia_change, summary
+        sector_context: Optional dict with class_name, etf, change_pct, summary
 
     Returns:
         String summary of the stock's news, earnings, and performance
@@ -166,6 +169,11 @@ Today's Market Context:
 - Dow Jones: {market_context['dia_change']:+.2f}%
 - Overview: {market_context['summary']}""")
 
+        if sector_context:
+            prompt_parts.append(f"""
+Today's Sector Context ({sector_context['class_name']} — {sector_context['etf']}: {sector_context['change_pct']:+.2f}%):
+{sector_context['summary']}""")
+
         prompt_parts.append("""
 Provide a 3-4 sentence summary. DO NOT include any preamble like "Here's your update" or "Let me summarize". Start directly with the key information.""")
 
@@ -190,21 +198,26 @@ Be concise, factual, and actionable. No fluff.""")
         prompt = "\n".join(prompt_parts)
 
     else:
-        market_section = ""
+        context_section = ""
         if market_context:
-            market_section = f"""
+            context_section += f"""
 Today's Market Context:
 - S&P 500: {market_context['spy_change']:+.2f}%
 - Nasdaq: {market_context['qqq_change']:+.2f}%
 - Dow Jones: {market_context['dia_change']:+.2f}%
 - Overview: {market_context['summary']}
 """
+        if sector_context:
+            context_section += f"""
+Today's Sector Context ({sector_context['class_name']} — {sector_context['etf']}: {sector_context['change_pct']:+.2f}%):
+{sector_context['summary']}
+"""
         prompt = f"""You are a financial analyst providing daily stock updates.
 
 Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%
-{market_section}
+{context_section}
 No news articles or earnings reports were published recently for this stock.
 
 Provide a 3-4 sentence summary analyzing the stock's performance. DO NOT include any preamble. Start directly with analysis. Cover:
@@ -229,7 +242,7 @@ Be concise and factual. Mention that no news was available."""
         print(f"Error generating summary for {symbol}: {e}")
         return f"**{name} ({symbol})**: ${price:.2f} ({change:+.2f}%)\n\nError generating summary.\n"
 
-def build_stock_prompt(stock_data, market_context=None):
+def build_stock_prompt(stock_data, market_context=None, sector_context=None):
     """Build the detailed prompt for a single stock (same logic as summarize_stock_news)"""
     symbol = stock_data['symbol']
     name = stock_data['name']
@@ -272,6 +285,11 @@ Today's Market Context:
 - Dow Jones: {market_context['dia_change']:+.2f}%
 - Overview: {market_context['summary']}""")
 
+        if sector_context:
+            prompt_parts.append(f"""
+Today's Sector Context ({sector_context['class_name']} — {sector_context['etf']}: {sector_context['change_pct']:+.2f}%):
+{sector_context['summary']}""")
+
         if has_earnings:
             prompt_parts.append("""
 Focus on:
@@ -293,19 +311,24 @@ Be concise, factual, and actionable. No fluff.""")
         return "\n".join(prompt_parts)
 
     else:
-        market_section = ""
+        context_section = ""
         if market_context:
-            market_section = f"""
+            context_section += f"""
 Today's Market Context:
 - S&P 500: {market_context['spy_change']:+.2f}%
 - Nasdaq: {market_context['qqq_change']:+.2f}%
 - Dow Jones: {market_context['dia_change']:+.2f}%
 - Overview: {market_context['summary']}
 """
+        if sector_context:
+            context_section += f"""
+Today's Sector Context ({sector_context['class_name']} — {sector_context['etf']}: {sector_context['change_pct']:+.2f}%):
+{sector_context['summary']}
+"""
         return f"""Stock: {name} ({symbol})
 Current Price: ${price:.2f}
 Change: {change:+.2f}%
-{market_section}
+{context_section}
 No news articles or earnings reports were published recently for this stock.
 
 Cover:
@@ -440,6 +463,20 @@ def generate_digest(stocks_data, batch_size=10, user_name=None):
 
     digest_header = "\n".join(digest_parts)
 
+    # Pre-compute sector contexts (cached per class, so N stocks in same sector = 1 fetch)
+    print("  Fetching sector contexts...")
+    symbol_sector: dict[str, dict | None] = {}
+    _seen_classes: dict[str, dict | None] = {}
+    for stock_data in stocks_data:
+        symbol = stock_data['symbol']
+        class_name, config = get_sector_class(symbol)
+        if class_name:
+            if class_name not in _seen_classes:
+                _seen_classes[class_name] = fetch_sector_context(class_name, config)
+            symbol_sector[symbol] = _seen_classes[class_name]
+        else:
+            symbol_sector[symbol] = None
+
     all_summaries = []
     provider = _get_provider()
 
@@ -485,7 +522,11 @@ STOCKS TO ANALYZE:
             # Add each stock with its detailed prompt
             stock_prompts = []
             for stock_data in batch:
-                stock_prompt = build_stock_prompt(stock_data, market_context=market_data)
+                stock_prompt = build_stock_prompt(
+                    stock_data,
+                    market_context=market_data,
+                    sector_context=symbol_sector.get(stock_data['symbol']),
+                )
                 stock_prompts.append(stock_prompt + "\n\n" + "="*60)
 
             batch_prompt += "\n".join(stock_prompts)
@@ -497,14 +538,22 @@ STOCKS TO ANALYZE:
                 print(f"  Error in batch {i//batch_size + 1}: {e}")
                 # Fallback to individual for this batch
                 for stock_data in batch:
-                    summary = summarize_stock_news(stock_data, market_context=market_data)
+                    summary = summarize_stock_news(
+                        stock_data,
+                        market_context=market_data,
+                        sector_context=symbol_sector.get(stock_data['symbol']),
+                    )
                     all_summaries.append(summary + "\n" + "-" * 60 + "\n")
     else:
         # CLAUDE PATH: Process stocks one at a time
         print(f"  Processing {len(stocks_data)} stocks individually...")
         for i, stock_data in enumerate(stocks_data, 1):
             print(f"  Processing stock {i}/{len(stocks_data)}: {stock_data['symbol']}...")
-            summary = summarize_stock_news(stock_data, market_context=market_data)
+            summary = summarize_stock_news(
+                stock_data,
+                market_context=market_data,
+                sector_context=symbol_sector.get(stock_data['symbol']),
+            )
             all_summaries.append(summary + "\n" + "-" * 60 + "\n")
 
     # Combine all summaries
