@@ -209,8 +209,14 @@ class ThesisAgent:
         raw = self.provider.generate(prompt, max_tokens=2048)
         debug_log(f"THESIS VERDICT — {ticker}", raw)
 
+        # Strip markdown code fences if the LLM wrapped the response
+        cleaned = raw.strip()
+        if cleaned.startswith('```'):
+            cleaned = cleaned.split('\n', 1)[-1]
+            cleaned = cleaned.rsplit('```', 1)[0].strip()
+
         try:
-            data = json.loads(raw)
+            data = json.loads(cleaned)
         except json.JSONDecodeError as e:
             raise ValueError(f"LLM returned non-JSON response: {e}\n\nRaw response:\n{raw}")
 

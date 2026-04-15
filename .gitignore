@@ -3,4 +3,6 @@
 *.pyc
 *.pyo
 logs/
-data/opening_bell.db
+data/*.db
+data/users.json
+data/users_test.json

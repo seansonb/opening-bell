@@ -27,30 +27,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
-    - name: Download DB artifact
-      uses: dawidd6/action-download-artifact@v3
-      with:
-        workflow: daily-digest.yml
-        name: opening-bell-db
-        path: data/
-      continue-on-error: true
 
     - name: Run daily digest
       env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
         CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
       run: |
         python src/main.py
-
-    - name: Upload DB artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: opening-bell-db
-        path: data/opening_bell.db
-        retention-days: 7
 
     - name: Upload logs on failure
       if: failure()

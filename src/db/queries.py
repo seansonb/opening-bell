@@ -110,9 +110,10 @@ def save_articles(articles: list[dict], symbol: str) -> None:
         return
     try:
         with get_session() as session:
+            candidate_urls = [a.get('link', '') for a in articles if a.get('link')]
             existing_urls = {
                 row[0] for row in session.query(NewsArticle.url).filter(
-                    NewsArticle.symbol == symbol.upper()
+                    NewsArticle.url.in_(candidate_urls)
                 ).all()
             }
             new_rows = []

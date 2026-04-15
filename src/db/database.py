@@ -12,19 +12,24 @@ import os
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from db.models import Base, User, Watchlist, Thesis, NewsArticle
 
-_test_mode = os.getenv('TEST_MODE', 'false').lower() == 'true'
-_default_db = 'sqlite:///data/opening_bell_test.db' if _test_mode else 'sqlite:///data/opening_bell.db'
-DATABASE_URL = os.getenv('DATABASE_URL', _default_db)
+load_dotenv()
 
-# SQLite requires check_same_thread=False; Postgres does not accept it
-_connect_args = {'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {}
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///data/opening_bell.db')
 
-engine = create_engine(DATABASE_URL, connect_args=_connect_args)
+if DATABASE_URL.startswith('sqlite'):
+    # SQLite requires check_same_thread=False for multi-threaded use
+    engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
+else:
+    # NullPool prevents connection leaks in short-lived/serverless jobs (e.g. Neon)
+    engine = create_engine(DATABASE_URL, poolclass=NullPool)
+
 SessionLocal = sessionmaker(bind=engine)
 
 # Resolve project root (two levels up from src/db/)
@@ -32,7 +37,7 @@ _PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 
 
 def init_db() -> None:
-    """Create all tables if they don't exist, then seed users and theses."""
+    """Create all tables if they don't exist, then seed users from JSON if present."""
     Base.metadata.create_all(engine)
     seed_users()
 
@@ -52,9 +57,7 @@ def seed_users() -> None:
     Seed users, watchlists, and theses from JSON + thesis files.
     Idempotent — safe to call on every startup.
     """
-    test_mode = os.getenv('TEST_MODE', 'false').lower() == 'true'
-    users_file = 'data/users_test.json' if test_mode else 'data/users.json'
-    users_path = os.path.join(_PROJECT_ROOT, users_file)
+    users_path = os.path.join(_PROJECT_ROOT, 'data/users.json')
 
     try:
         with open(users_path, 'r') as f:
@@ -70,15 +73,12 @@ def seed_users() -> None:
                 continue
 
             # Upsert user
-            theses_dir = user_data.get('theses_dir')
             user = session.query(User).filter_by(email=email).first()
             if not user:
-                user = User(name=user_data['name'], email=email, theses_dir=theses_dir)
+                user = User(name=user_data['name'], email=email)
                 session.add(user)
                 session.flush()
                 print(f"  [db] Seeded user: {user.name} ({email})")
-            elif user.theses_dir != theses_dir:
-                user.theses_dir = theses_dir
 
             # Upsert watchlist symbols
             existing_symbols = {w.symbol for w in user.watchlist}
@@ -88,27 +88,37 @@ def seed_users() -> None:
 
         session.commit()
 
-    # Seed theses — scan theses/ dir and associate with watchlist users
-    _seed_theses()
 
+def import_theses_from_disk(theses_root: str | None = None) -> None:
+    """
+    One-time import utility: scan a directory tree for per-user thesis markdown files
+    and upsert them into the DB.
 
-def _seed_theses() -> None:
+    Expected layout:
+        <theses_root>/<user_name_or_email>/<SYMBOL>.md
+
+    Call this manually during initial migration or when bulk-importing thesis files.
+    It is NOT called on normal startup.
     """
-    For each user, scan their theses_dir (or the global theses/ fallback) for .md files.
-    Upsert a Thesis row for each file whose stem matches a symbol in the user's watchlist.
-    """
-    global_theses_dir = os.path.join(_PROJECT_ROOT, 'theses')
+    root = theses_root or os.path.join(_PROJECT_ROOT, 'theses')
 
     with get_session() as session:
         users = session.query(User).all()
+        user_by_name = {u.name.lower(): u for u in users}
 
-        for user in users:
-            scan_dir = os.path.join(_PROJECT_ROOT, user.theses_dir) if user.theses_dir else global_theses_dir
-            pattern = os.path.join(scan_dir, '*.md')
+        for subdir in glob.glob(os.path.join(root, '*')):
+            if not os.path.isdir(subdir):
+                continue
+
+            dir_name = os.path.basename(subdir).lower()
+            user = user_by_name.get(dir_name)
+            if not user:
+                print(f"  [db] No user found for theses dir: {dir_name}, skipping")
+                continue
 
             user_symbols = {w.symbol for w in user.watchlist}
 
-            for path in glob.glob(pattern):
+            for path in glob.glob(os.path.join(subdir, '*.md')):
                 filename = os.path.basename(path)
                 if filename.startswith('_'):
                     continue
@@ -130,10 +140,10 @@ def _seed_theses() -> None:
                 if existing:
                     if existing.content != content:
                         existing.content = content
-                        print(f"  [db] Updated thesis: {symbol} for user_id={user.id}")
+                        print(f"  [db] Updated thesis: {symbol} for {user.name}")
                 else:
                     session.add(Thesis(user_id=user.id, symbol=symbol, content=content))
-                    print(f"  [db] Seeded thesis: {symbol} for user_id={user.id}")
+                    print(f"  [db] Imported thesis: {symbol} for {user.name}")
 
         session.commit()
 
