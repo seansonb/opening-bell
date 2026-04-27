@@ -77,11 +77,11 @@ def _fetch_news_with_cache(symbol: str, company_name: str) -> list:
     if cached:
         articles = [
             {
-                'title': a.title,
-                'publisher': a.publisher,
-                'link': a.url,
-                'published': a.published_at.strftime('%Y-%m-%d %H:%M') if a.published_at else '',
-                'summary': a.summary or '',
+                'title': a['title'],
+                'publisher': a['publisher'],
+                'link': a['url'],
+                'published': a['published_at'].strftime('%Y-%m-%d %H:%M') if a['published_at'] else '',
+                'summary': a['summary'],
             }
             for a in cached
         ]

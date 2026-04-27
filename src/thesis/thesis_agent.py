@@ -16,7 +16,6 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from llm.llm_providers import LLMProvider, get_provider
-from thesis.thesis_manager import _parse_frontmatter
 from stock.cache import stock_cache
 from utils.debug import debug_log
 from db.queries import get_thesis, save_verdict
@@ -185,8 +184,14 @@ class ThesisAgent:
         thesis_obj = get_thesis(user_id, ticker) if user_id is not None else None
         if thesis_obj is None:
             raise ValueError(f"No thesis found in DB for {ticker} (user_id={user_id})")
-        frontmatter, body = _parse_frontmatter(thesis_obj.content)
-        thesis = {'frontmatter': frontmatter, 'body': body}
+        thesis = {
+            'frontmatter': {
+                'status': thesis_obj.status,
+                'sector_theses': thesis_obj.sector_theses,
+                'macro_theses': thesis_obj.macro_theses,
+            },
+            'body': thesis_obj.body,
+        }
 
         # Inject fake news if requested, otherwise use real news
         if injected_news is not None:

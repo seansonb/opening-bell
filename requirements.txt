@@ -1,6 +1,6 @@
 pyyaml
-sqlalchemy
 psycopg2-binary
+sqlalchemy  # required by APScheduler SQLAlchemyJobStore (scheduler.py only)
 apscheduler==3.10.4
 yfinance==0.2.66
 curl-cffi==0.7.4

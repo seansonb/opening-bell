@@ -1,84 +1,51 @@
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    user_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email      TEXT UNIQUE NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name  TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS watchlist (
+    id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    symbol  TEXT NOT NULL,
+    UNIQUE(user_id, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS theses (
+    thesis_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    symbol        TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'watchlist',
+    sector_theses TEXT[] DEFAULT '{}',
+    macro_theses  TEXT[] DEFAULT '{}',
+    body          TEXT NOT NULL DEFAULT '',
+    thesis_log    TEXT NOT NULL DEFAULT '',
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, symbol)
+);
+
+CREATE TABLE IF NOT EXISTS thesis_verdicts (
+    verdict_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thesis_id  UUID NOT NULL REFERENCES theses(thesis_id) ON DELETE CASCADE,
+    verdict    TEXT NOT NULL,
+    reasoning  TEXT,
+    run_date   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS news_articles (
+    article_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    symbol       TEXT NOT NULL,
+    title        TEXT NOT NULL,
+    url          TEXT UNIQUE,
+    publisher    TEXT,
+    summary      TEXT,
+    published_at TIMESTAMPTZ,
+    fetched_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_news_symbol_published ON news_articles(symbol, published_at);
 """
-SQLAlchemy ORM models for Opening Bell.
-"""
-
-import uuid
-from datetime import datetime
-
-from sqlalchemy import String, Text, DateTime, ForeignKey, UniqueConstraint, Index, Uuid
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-class User(Base):
-    __tablename__ = 'users'
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    watchlist: Mapped[list['Watchlist']] = relationship(
-        'Watchlist', back_populates='user', cascade='all, delete-orphan'
-    )
-    theses: Mapped[list['Thesis']] = relationship(
-        'Thesis', back_populates='user', cascade='all, delete-orphan'
-    )
-
-
-class Watchlist(Base):
-    __tablename__ = 'watchlist'
-    __table_args__ = (UniqueConstraint('user_id', 'symbol'),)
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    symbol: Mapped[str] = mapped_column(String, nullable=False)
-
-    user: Mapped['User'] = relationship('User', back_populates='watchlist')
-
-
-class Thesis(Base):
-    __tablename__ = 'theses'
-    __table_args__ = (UniqueConstraint('user_id', 'symbol'),)
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    symbol: Mapped[str] = mapped_column(String, nullable=False)
-    content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped['User'] = relationship('User', back_populates='theses')
-    verdicts: Mapped[list['ThesisVerdict']] = relationship(
-        'ThesisVerdict', back_populates='thesis', cascade='all, delete-orphan'
-    )
-
-
-class ThesisVerdict(Base):
-    __tablename__ = 'thesis_verdicts'
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    thesis_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey('theses.id', ondelete='CASCADE'), nullable=False)
-    verdict: Mapped[str] = mapped_column(String)
-    reasoning: Mapped[str] = mapped_column(Text)
-    run_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    thesis: Mapped['Thesis'] = relationship('Thesis', back_populates='verdicts')
-
-
-class NewsArticle(Base):
-    __tablename__ = 'news_articles'
-    __table_args__ = (
-        Index('ix_news_symbol_published', 'symbol', 'published_at'),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    symbol: Mapped[str] = mapped_column(String, nullable=False)
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    url: Mapped[str] = mapped_column(String, unique=True)
-    publisher: Mapped[str] = mapped_column(String)
-    summary: Mapped[str] = mapped_column(Text)
-    published_at: Mapped[datetime] = mapped_column(DateTime)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
