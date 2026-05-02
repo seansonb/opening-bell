@@ -1,4 +1,5 @@
 pyyaml
+jinja2
 psycopg2-binary
 sqlalchemy  # required by APScheduler SQLAlchemyJobStore (scheduler.py only)
 apscheduler==3.10.4

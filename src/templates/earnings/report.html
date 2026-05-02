@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ symbol }} Earnings Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: #1e293b; }
+    .wrapper { max-width: 600px; margin: 0 auto; padding: 0 0 32px; }
+
+    /* ── Header ── */
+    .header { background-color: #0f172a; padding: 28px 24px 24px; }
+    .header-brand { color: #475569; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+    .header-company { color: #f8fafc; font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
+    .header-meta { color: #64748b; font-size: 13px; }
+
+    /* ── Headline banner ── */
+    .headline-card { background: #f0f9ff; border-left: 4px solid #3b82f6; margin: 0; padding: 16px 20px; }
+    .headline-text { color: #1e3a5f; font-size: 14px; line-height: 1.65; font-style: italic; }
+
+    /* ── Section cards ── */
+    .card { background: #ffffff; margin-top: 12px; }
+    .card-title { background-color: #1e293b; color: #94a3b8; font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase; font-weight: 700; padding: 8px 20px; }
+    .card-body { padding: 4px 20px 12px; }
+
+    /* ── Data rows ── */
+    .row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .row:last-child { border-bottom: none; }
+    .row-label { color: #64748b; padding-right: 12px; }
+    .row-value { font-weight: 600; text-align: right; white-space: nowrap; }
+
+    /* ── Colors ── */
+    .pos { color: #16a34a; }
+    .neg { color: #dc2626; }
+    .dim { color: #94a3b8; font-weight: 400; }
+    .yoy { font-size: 11px; font-weight: 500; margin-left: 6px; opacity: 0.85; }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .badge-green  { background: #dcfce7; color: #15803d; }
+    .badge-red    { background: #fee2e2; color: #b91c1c; }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .badge-yellow { background: #fef9c3; color: #92400e; }
+    .badge-gray   { background: #f1f5f9; color: #475569; }
+
+    /* ── Bullet lists ── */
+    .bullet-list { list-style: none; padding: 0; margin: 0; }
+    .bullet-list li { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f8fafc; font-size: 14px; color: #334155; line-height: 1.5; }
+    .bullet-list li:last-child { border-bottom: none; }
+    .bullet-list li::before { content: ''; flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; background: #94a3b8; }
+    .bullet-list.highlights li::before { background: #16a34a; }
+    .bullet-list.risks      li::before { background: #dc2626; }
+    .bullet-list.topics     li::before { background: #3b82f6; }
+
+    /* ── News ── */
+    .news-item { padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+    .news-item:last-child { border-bottom: none; }
+    .news-date  { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+    .news-title { font-size: 13px; color: #334155; line-height: 1.4; }
+    .news-title a { color: #1d4ed8; text-decoration: none; }
+    .news-title a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    .footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.6; margin-top: 12px; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  {# ── Header ── #}
+  <div class="header">
+    <div class="header-brand">Opening Bell &nbsp;·&nbsp; Earnings Report</div>
+    <div class="header-company">{{ company_name }} ({{ symbol }})</div>
+    <div class="header-meta">{{ earnings_date }}</div>
+  </div>
+
+  {# ── Headline ── #}
+  {% if headline %}
+  <div class="headline-card">
+    <p class="headline-text">{{ headline }}</p>
+  </div>
+  {% endif %}
+
+  {# ── Price Movement ── #}
+  {% if price %}
+  <div class="card">
+    <div class="card-title">Price Movement</div>
+    <div class="card-body">
+      <div class="row">
+        <span class="row-label">Current Price</span>
+        <span class="row-value">{{ price.current | currency }}</span>
+      </div>
+      {% if price.change_pct is not none %}
+      <div class="row">
+        <span class="row-label">Today's Change</span>
+        <span class="row-value {{ sign_class(price.change_pct) }}">{{ price.change_pct | pct(true) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── EPS ── #}
+  {% if eps %}
+  <div class="card">
+    <div class="card-title">Earnings Per Share</div>
+    <div class="card-body">
+      {% if eps.gaap is not none %}
+      <div class="row">
+        <span class="row-label">GAAP EPS</span>
+        <span class="row-value">
+          {{ eps.gaap | currency }}
+          {% if eps.gaap_yoy_pct is not none %}<span class="yoy {{ sign_class(eps.gaap_yoy_pct) }}">{{ eps.gaap_yoy_pct | pct(true) }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if eps.non_gaap is not none %}
+      <div class="row">
+        <span class="row-label">Non-GAAP EPS</span>
+        <span class="row-value">
+          {{ eps.non_gaap | currency }}
+          {% if eps.non_gaap_yoy_pct is not none %}<span class="yoy {{ sign_class(eps.non_gaap_yoy_pct) }}">{{ eps.non_gaap_yoy_pct | pct(true) }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if eps.estimate is not none %}
+      <div class="row">
+        <span class="row-label">Analyst Estimate</span>
+        <span class="row-value dim">{{ eps.estimate | currency }}</span>
+      </div>
+      {% endif %}
+      {% if eps.beat_miss is not none %}
+      <div class="row">
+        <span class="row-label">Beat / Miss</span>
+        <span class="row-value {{ sign_class(eps.beat_miss) }}">{{ eps.beat_miss | currency(true) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Revenue ── #}
+  {% if revenue %}
+  <div class="card">
+    <div class="card-title">Revenue</div>
+    <div class="card-body">
+      <div class="row">
+        <span class="row-label">Reported</span>
+        <span class="row-value">{{ revenue.reported | currency }}</span>
+      </div>
+      {% if revenue.estimate is not none %}
+      <div class="row">
+        <span class="row-label">Analyst Estimate</span>
+        <span class="row-value dim">{{ revenue.estimate | currency }}</span>
+      </div>
+      {% endif %}
+      {% if revenue.yoy_growth_pct is not none %}
+      <div class="row">
+        <span class="row-label">YoY Growth</span>
+        <span class="row-value {{ sign_class(revenue.yoy_growth_pct) }}">{{ revenue.yoy_growth_pct | pct(true) }}</span>
+      </div>
+      {% endif %}
+      {% if revenue.beat_miss is not none %}
+      <div class="row">
+        <span class="row-label">Beat / Miss</span>
+        <span class="row-value {{ sign_class(revenue.beat_miss) }}">{{ revenue.beat_miss | currency(true) }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Margins ── #}
+  {% if margins %}
+  <div class="card">
+    <div class="card-title">Margins</div>
+    <div class="card-body">
+      {% if margins.gross_single is not none %}
+      <div class="row">
+        <span class="row-label">Gross Margin</span>
+        <span class="row-value">
+          {{ margins.gross_single | pct }}
+          {% if margins.gross_single_pp is not none %}<span class="yoy {{ sign_class(margins.gross_single_pp) }}">{{ margins.gross_single_pp | pp }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% elif margins.gross_gaap is not none or margins.gross_non_gaap is not none %}
+      <div class="row">
+        <span class="row-label">Gross Margin &nbsp;<span class="dim" style="font-size:11px">GAAP / Non-GAAP</span></span>
+        <span class="row-value">
+          {{ margins.gross_gaap | pct if margins.gross_gaap is not none else '—' }}
+          {% if margins.gross_gaap_pp is not none %}<span class="yoy {{ sign_class(margins.gross_gaap_pp) }}">{{ margins.gross_gaap_pp | pp }}</span>{% endif %}
+          &nbsp;/&nbsp;
+          {{ margins.gross_non_gaap | pct if margins.gross_non_gaap is not none else '—' }}
+          {% if margins.gross_non_gaap_pp is not none %}<span class="yoy {{ sign_class(margins.gross_non_gaap_pp) }}">{{ margins.gross_non_gaap_pp | pp }}</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if margins.operating_single is not none %}
+      <div class="row">
+        <span class="row-label">Operating Margin</span>
+        <span class="row-value">
+          <span class="{{ sign_class(margins.operating_single) }}">{{ margins.operating_single | pct }}</span>
+          {% if margins.operating_single_pp is not none %}<span class="yoy {{ sign_class(margins.operating_single_pp) }}">{{ margins.operating_single_pp | pp }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% elif margins.operating_gaap is not none or margins.operating_non_gaap is not none %}
+      <div class="row">
+        <span class="row-label">Operating Margin &nbsp;<span class="dim" style="font-size:11px">GAAP / Non-GAAP</span></span>
+        <span class="row-value">
+          <span class="{{ sign_class(margins.operating_gaap) }}">{{ margins.operating_gaap | pct if margins.operating_gaap is not none else '—' }}</span>
+          {% if margins.operating_gaap_pp is not none %}<span class="yoy {{ sign_class(margins.operating_gaap_pp) }}">{{ margins.operating_gaap_pp | pp }}</span>{% endif %}
+          &nbsp;/&nbsp;
+          <span class="{{ sign_class(margins.operating_non_gaap) }}">{{ margins.operating_non_gaap | pct if margins.operating_non_gaap is not none else '—' }}</span>
+          {% if margins.operating_non_gaap_pp is not none %}<span class="yoy {{ sign_class(margins.operating_non_gaap_pp) }}">{{ margins.operating_non_gaap_pp | pp }}</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if margins.income_gaap is not none or margins.income_non_gaap is not none %}
+      <div class="row">
+        <span class="row-label">Operating Income &nbsp;<span class="dim" style="font-size:11px">GAAP / Non-GAAP</span></span>
+        <span class="row-value">
+          {{ margins.income_gaap | currency if margins.income_gaap is not none else '—' }}
+          &nbsp;/&nbsp;
+          {{ margins.income_non_gaap | currency if margins.income_non_gaap is not none else '—' }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Cash Flow ── #}
+  {% if cash_flow %}
+  <div class="card">
+    <div class="card-title">Cash Flow &amp; Liquidity</div>
+    <div class="card-body">
+      {% if cash_flow.free is not none %}
+      <div class="row">
+        <span class="row-label">Free Cash Flow</span>
+        <span class="row-value {{ sign_class(cash_flow.free) }}">
+          {{ cash_flow.free | currency }}
+          {% if cash_flow.free_yoy_pct is not none %}<span class="yoy {{ sign_class(cash_flow.free_yoy_pct) }}">{{ cash_flow.free_yoy_pct | pct(true) }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if cash_flow.operating is not none %}
+      <div class="row">
+        <span class="row-label">Operating Cash Flow</span>
+        <span class="row-value {{ sign_class(cash_flow.operating) }}">
+          {{ cash_flow.operating | currency }}
+          {% if cash_flow.operating_yoy_pct is not none %}<span class="yoy {{ sign_class(cash_flow.operating_yoy_pct) }}">{{ cash_flow.operating_yoy_pct | pct(true) }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if cash_flow.cash is not none %}
+      <div class="row">
+        <span class="row-label">Cash &amp; Equivalents</span>
+        <span class="row-value">{{ cash_flow.cash | currency }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Key Metrics (SaaS / subscription) ── #}
+  {% if saas %}
+  <div class="card">
+    <div class="card-title">Key Metrics</div>
+    <div class="card-body">
+      {% if saas.nrr_pct is not none %}
+      <div class="row">
+        <span class="row-label">Net Revenue Retention</span>
+        <span class="row-value {{ sign_class(saas.nrr_pct - 100) }}">
+          {{ saas.nrr_pct | pct }}
+          {% if saas.nrr_pp is not none %}<span class="yoy {{ sign_class(saas.nrr_pp) }}">{{ saas.nrr_pp | pp }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if saas.arr is not none %}
+      <div class="row">
+        <span class="row-label">ARR</span>
+        <span class="row-value">
+          {{ saas.arr | currency }}
+          {% if saas.arr_yoy_pct is not none %}<span class="yoy {{ sign_class(saas.arr_yoy_pct) }}">{{ saas.arr_yoy_pct | pct(true) }} YoY</span>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if saas.rpo is not none %}
+      <div class="row">
+        <span class="row-label">Remaining Performance Obligations</span>
+        <span class="row-value">{{ saas.rpo | currency }}</span>
+      </div>
+      {% endif %}
+      {% if saas.customers is not none %}
+      <div class="row">
+        <span class="row-label">Total Customers</span>
+        <span class="row-value">{{ '{:,.0f}'.format(saas.customers) }}</span>
+      </div>
+      {% endif %}
+      {% if saas.customers_yoy_pct is not none %}
+      <div class="row">
+        <span class="row-label">Customer Growth (YoY)</span>
+        <span class="row-value {{ sign_class(saas.customers_yoy_pct) }}">{{ saas.customers_yoy_pct | pct(true) }}</span>
+      </div>
+      {% endif %}
+      {% if saas.large_customers is not none %}
+      <div class="row">
+        <span class="row-label">Large Customers</span>
+        <span class="row-value">{{ '{:,.0f}'.format(saas.large_customers) }}</span>
+      </div>
+      {% endif %}
+      {% if saas.churn_pct is not none %}
+      <div class="row">
+        <span class="row-label">Gross Churn</span>
+        <span class="row-value neg">{{ saas.churn_pct | pct }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Guidance ── #}
+  {% if guidance %}
+  <div class="card">
+    <div class="card-title">Guidance</div>
+    <div class="card-body">
+      {% if guidance.raised is not none %}
+      <div class="row">
+        <span class="row-label">Outlook</span>
+        <span class="row-value">
+          {% if guidance.raised %}
+          <span class="badge badge-green">Raised ↑</span>
+          {% else %}
+          <span class="badge badge-gray">Not Raised</span>
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if guidance.revenue_low is not none or guidance.revenue_high is not none %}
+      <div class="row">
+        <span class="row-label">Revenue</span>
+        <span class="row-value">
+          {% if guidance.revenue_low is not none and guidance.revenue_high is not none %}
+            {{ guidance.revenue_low | currency }} – {{ guidance.revenue_high | currency }}
+          {% elif guidance.revenue_high is not none %}
+            {{ guidance.revenue_high | currency }}
+          {% else %}
+            {{ guidance.revenue_low | currency }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if guidance.eps_low is not none or guidance.eps_high is not none %}
+      <div class="row">
+        <span class="row-label">EPS</span>
+        <span class="row-value">
+          {% if guidance.eps_low is not none and guidance.eps_high is not none %}
+            {{ guidance.eps_low | currency }} – {{ guidance.eps_high | currency }}
+          {% elif guidance.eps_high is not none %}
+            {{ guidance.eps_high | currency }}
+          {% else %}
+            {{ guidance.eps_low | currency }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if guidance.margin_low is not none or guidance.margin_high is not none %}
+      <div class="row">
+        <span class="row-label">Operating Margin</span>
+        <span class="row-value">
+          {% if guidance.margin_low is not none and guidance.margin_high is not none %}
+            {{ guidance.margin_low | pct }} – {{ guidance.margin_high | pct }}
+          {% elif guidance.margin_high is not none %}
+            {{ guidance.margin_high | pct }}
+          {% else %}
+            {{ guidance.margin_low | pct }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Management Commentary ── #}
+  {% if management %}
+  <div class="card">
+    <div class="card-title">Management Commentary</div>
+    <div class="card-body">
+      {% if management.tone %}
+      <div class="row">
+        <span class="row-label">Overall Tone</span>
+        <span class="row-value">
+          {% if management.tone == 'confident' %}
+          <span class="badge badge-blue">Confident</span>
+          {% elif management.tone == 'cautious' %}
+          <span class="badge badge-yellow">Cautious</span>
+          {% else %}
+          <span class="badge badge-gray">Mixed</span>
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if management.topics %}
+      <div style="padding-top: 12px;">
+        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 8px;">Forward-Looking Themes</div>
+        <ul class="bullet-list topics">
+          {% for topic in management.topics %}
+          <li>{{ topic }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Key Highlights ── #}
+  {% if highlights %}
+  <div class="card">
+    <div class="card-title">Key Highlights</div>
+    <div class="card-body" style="padding-top: 8px;">
+      <ul class="bullet-list highlights">
+        {% for item in highlights %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Risks & Concerns ── #}
+  {% if risks %}
+  <div class="card">
+    <div class="card-title">Risks &amp; Concerns</div>
+    <div class="card-body" style="padding-top: 8px;">
+      <ul class="bullet-list risks">
+        {% for item in risks %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Thesis Check-In ── #}
+  {% if thesis %}
+  <div class="card">
+    <div class="card-title">Thesis Check-In</div>
+    <div class="card-body">
+      {% if thesis.verdict %}
+      <div class="row">
+        <span class="row-label">Verdict</span>
+        <span class="row-value">
+          {% if thesis.verdict == 'validates' %}
+          <span class="badge badge-green">Validates ✓</span>
+          {% elif thesis.verdict == 'weakens' %}
+          <span class="badge badge-red">Weakens ✗</span>
+          {% elif thesis.verdict == 'monitor' %}
+          <span class="badge badge-yellow">Monitor ⚠</span>
+          {% else %}
+          <span class="badge badge-gray">Neutral</span>
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if thesis.commentary %}
+      <div style="padding-top: 10px; font-size: 14px; color: #334155; line-height: 1.65;">
+        {{ thesis.commentary }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Recent News ── #}
+  {% if news %}
+  <div class="card">
+    <div class="card-title">Recent News</div>
+    <div class="card-body">
+      {% for article in news %}
+      <div class="news-item">
+        {% if article.published_str %}<div class="news-date">{{ article.published_str }}{% if article.publisher %} &nbsp;·&nbsp; {{ article.publisher }}{% endif %}</div>{% endif %}
+        <div class="news-title">
+          {% if article.url %}<a href="{{ article.url }}" target="_blank">{{ article.title }}</a>{% else %}{{ article.title }}{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Footer ── #}
+  <div class="footer">
+    Opening Bell &nbsp;·&nbsp; {{ earnings_date }}<br>
+    Automated earnings summary — not investment advice.
+  </div>
+
+</div>
+</body>
+</html>

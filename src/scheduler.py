@@ -29,8 +29,23 @@ jobstores = {
 scheduler = BlockingScheduler(jobstores=jobstores, timezone='America/New_York')
 
 
+def _register_static_jobs() -> None:
+    from jobs.earnings_schedule_job import trigger as earnings_schedule_trigger
+    scheduler.add_job(
+        earnings_schedule_trigger,
+        trigger='cron',
+        day_of_week='sun',
+        hour=8,
+        minute=0,
+        id='earnings_schedule_weekly',
+        replace_existing=True,
+    )
+    log.info('Registered weekly earnings schedule job (Sun 08:00 UTC)')
+
+
 if __name__ == '__main__':
     log.info('Starting Opening Bell scheduler...')
+    _register_static_jobs()
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

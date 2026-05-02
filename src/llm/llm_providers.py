@@ -23,10 +23,10 @@ class LLMProvider(ABC):
 class ClaudeProvider(LLMProvider):
     """Anthropic Claude provider - no rate limiting needed, no batching"""
 
-    def __init__(self):
+    def __init__(self, model: str | None = None):
         import anthropic
         self.client = anthropic.Anthropic(api_key=os.getenv('CLAUDE_API_KEY'))
-        self.model = "claude-sonnet-4-20250514"
+        self.model = model or "claude-sonnet-4-20250514"
 
     def generate(self, prompt: str, **kwargs) -> str:
         create_kwargs = {
@@ -63,14 +63,10 @@ class GeminiProvider(LLMProvider):
         return True
 
 
-def get_provider(name: str) -> LLMProvider:
+def get_provider(name: str, model: str | None = None) -> LLMProvider:
     """Factory function to get the appropriate LLM provider"""
-    providers = {
-        'claude': ClaudeProvider,
-        'gemini': GeminiProvider
-    }
-
-    if name.lower() not in providers:
-        raise ValueError(f"Unknown provider: {name}. Valid options: {list(providers.keys())}")
-
-    return providers[name.lower()]()
+    if name.lower() == 'claude':
+        return ClaudeProvider(model=model)
+    if name.lower() == 'gemini':
+        return GeminiProvider()
+    raise ValueError(f"Unknown provider: {name}. Valid options: claude, gemini")

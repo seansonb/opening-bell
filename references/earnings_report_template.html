@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opening Bell — Earnings Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface-alt: #1a2236;
+    --border: #1e2d4a;
+    --text: #c9d1d9;
+    --text-muted: #6b7a8d;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --orange: #db6d28;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .brand {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .ticker-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .company-name {
+    font-size: 15px;
+    color: var(--text-muted);
+  }
+
+  .price-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .price { font-size: 22px; color: #fff; font-weight: 700; }
+  .price-change.up { color: var(--green); }
+  .price-change.down { color: var(--red); }
+  .price-change { font-size: 14px; font-weight: 500; }
+  .volume-tag { font-size: 11px; color: var(--text-muted); }
+
+  /* Verdict Banner */
+  .verdict-banner {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--green);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    border-radius: 0 6px 6px 0;
+  }
+  .verdict-banner.weakens { border-left-color: var(--red); }
+  .verdict-banner.neutral { border-left-color: var(--text-muted); }
+  .verdict-banner.monitor { border-left-color: var(--yellow); }
+
+  .verdict-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .verdict-text {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .verdict-detail {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .conviction {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: rgba(88,166,255,0.12);
+    color: var(--accent);
+  }
+
+  /* Data Grid */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    margin-top: 28px;
+  }
+
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .data-cell {
+    background: var(--surface);
+    padding: 12px 16px;
+  }
+
+  .data-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .data-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .data-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .beat { color: var(--green); }
+  .miss { color: var(--red); }
+  .flat { color: var(--text-muted); }
+
+  /* Notable Callouts */
+  .callout-banner {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--text-muted);
+    padding: 12px 18px;
+    margin-bottom: 10px;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout-banner.risk { border-left-color: var(--red); }
+  .callout-banner.opportunity { border-left-color: var(--green); }
+  .callout-banner.watch { border-left-color: var(--yellow); }
+
+  .callout-title {
+    font-size: 13px;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .callout-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Assumptions Check */
+  .assumptions-list {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .assumptions-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+  }
+
+  .assumptions-list li:last-child { border-bottom: none; }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-dot.confirmed { background: var(--green); }
+  .status-dot.weakened { background: var(--red); }
+  .status-dot.untested { background: var(--text-muted); }
+
+  /* Price Levels */
+  .price-levels {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .level-block {
+    flex: 1;
+    background: var(--surface);
+    padding: 12px;
+    text-align: center;
+  }
+
+  .level-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .level-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px; }
+  .level-value.current { color: var(--accent); }
+
+  /* Valuation Row */
+  .valuation-row {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .val-cell {
+    flex: 1;
+    background: var(--surface);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .val-label { font-size: 10px; color: var(--text-muted); }
+  .val-num { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; color: #fff; margin-top: 2px; }
+
+  /* Footer */
+  .footer {
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+     Variables: ${reportDate}, ${quarterLabel}, ${symbol},
+                ${companyName}, ${sector}, ${industry},
+                ${currentPrice}, ${priceChangeAbs},
+                ${priceChangePct}, ${priceChangeDirection},
+                ${volumeVsAvg}
+     ═══════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-top">
+    <span class="brand">Opening Bell</span>
+    <span class="date">${reportDate} · ${quarterLabel} · Post-Earnings</span>
+  </div>
+  <div class="ticker-header">
+    <span class="ticker">${symbol}</span>
+    <span class="company-name">${companyName} · ${sector} — ${industry}</span>
+  </div>
+  <div class="price-bar">
+    <span class="price">$${currentPrice}</span>
+    <!-- priceChangeDirection is "up" or "down" — drives the CSS class -->
+    <span class="price-change ${priceChangeDirection}">${priceChangeAbs} (${priceChangePct}%) AH</span>
+    <span class="volume-tag">Vol ${volumeVsAvg}x avg</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     THESIS VERDICT BANNER
+     Omit this entire block if no thesis exists for symbol.
+     verdictClass is one of: confirms / weakens / neutral / monitor
+     ═══════════════════════════════════════════════════════ -->
+<div class="verdict-banner ${verdictClass}">
+  <div class="verdict-label">Thesis Verdict</div>
+  <div class="verdict-text">${verdictVerb} — ${verdictSummary}</div>
+  <div class="verdict-detail">${verdictDetail}</div>
+  <!-- Omit conviction span if thesisConviction is null -->
+  <span class="conviction">Conviction: ${thesisConviction}</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     EARNINGS VS. ESTIMATES
+     Always show if epsActual exists.
+     Omit "Beat est." data-sub lines if estimate is null.
+     epsBeatMissClass / revenueBeatMissClass: "beat" or "miss"
+     epsYoyClass / revenueYoyClass: "beat" / "miss" / "flat"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Earnings vs. Estimates</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">EPS</div>
+    <div class="data-value">$${epsActual}</div>
+    <!-- Omit if epsEstimate is null -->
+    <div class="data-sub ${epsBeatMissClass}">Beat est. $${epsEstimate} (${epsBeatMissPct}%)</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Revenue</div>
+    <div class="data-value">$${revenueActualM}M</div>
+    <!-- Omit if revenueEstimateM is null -->
+    <div class="data-sub ${revenueBeatMissClass}">Beat est. $${revenueEstimateM}M (${revenueBeatMissPct}%)</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">EPS YoY</div>
+    <div class="data-value ${epsYoyClass}">${epsYoyChangePct}%</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Revenue YoY</div>
+    <div class="data-value ${revenueYoyClass}">${revenueYoyChangePct}%</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MARGINS & CASH FLOW
+     Omit individual cells if their value is null.
+     Omit entire section if all values are null.
+     grossMarginClass / opMarginClass / opLeverageClass: "beat" / "miss" / "flat"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Margins &amp; Cash Flow</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Gross Margin</div>
+    <div class="data-value">${grossMarginPct}%</div>
+    <div class="data-sub ${grossMarginClass}">${grossMarginChangePp}pp QoQ</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Operating Margin</div>
+    <div class="data-value">${opMarginPct}%</div>
+    <div class="data-sub ${opMarginClass}">${opMarginYoyChangePp}pp YoY</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Free Cash Flow</div>
+    <div class="data-value">$${fcfMillions}M</div>
+    <div class="data-sub flat">$${fcfPerShare}/share</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Op. Leverage</div>
+    <div class="data-value ${opLeverageClass}">${opLeverageRatio}x</div>
+    <div class="data-sub flat">Rev +${revenueGrowthPct}% / Opex +${opexGrowthPct}%</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     FORWARD GUIDANCE
+     Omit entire section if all guidance fields are null.
+     Omit individual cells if their value is null.
+     fyRevenueChangeFromPrior examples: "Raised from $2.82B" / "Lowered from $3.1B" / "Maintained"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Forward Guidance</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Next Q Revenue</div>
+    <div class="data-value">${nextQRevenueRange}</div>
+    <!-- Omit if nextQRevenueVsEst is null -->
+    <div class="data-sub beat">vs. est. ${nextQRevenueVsEst}</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Next Q EPS</div>
+    <div class="data-value">${nextQEpsRange}</div>
+    <!-- Omit if nextQEpsVsEst is null -->
+    <div class="data-sub beat">vs. est. ${nextQEpsVsEst}</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">FY Revenue</div>
+    <div class="data-value">${fyRevenueRange}</div>
+    <!-- Omit if fyRevenueChangeFromPrior is null -->
+    <div class="data-sub beat">${fyRevenueChangeFromPrior}</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">FY EPS</div>
+    <div class="data-value">${fyEpsRange}</div>
+    <!-- Omit if fyEpsChangeFromPrior is null -->
+    <div class="data-sub beat">${fyEpsChangeFromPrior}</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     QUALITY SIGNALS
+     Omit individual cells if their value is null.
+     Omit entire section if all values are null.
+     revenueTrendClass: "beat" (accelerating) / "miss" (decelerating) / "flat" (stable)
+     shareCountClass: "miss" (dilution) / "beat" (buyback) / "flat"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Quality Signals</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Rev Growth Trend (3Q)</div>
+    <div class="data-value">${revenueGrowthTrend}</div>
+    <div class="data-sub ${revenueTrendClass}">${revenueTrendDirection}</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Share Count &#916;</div>
+    <div class="data-value ${shareCountClass}">${shareCountChangePct}%</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Cash &amp; Equivalents</div>
+    <div class="data-value">$${cashEquivMillions}M</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Total Debt</div>
+    <div class="data-value">$${totalDebtMillions}M</div>
+    <div class="data-sub flat">Net cash: $${netCashMillions}M</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     NOTABLE CALLOUTS
+     Omit entire section if notableCallouts array is empty.
+     Repeat callout-banner block for each item in array.
+     calloutType: "risk" / "opportunity" / "watch"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Notable Callouts</div>
+<!-- Repeat for each callout -->
+<div class="callout-banner ${calloutType}">
+  <div class="callout-title">${calloutTitle}</div>
+  <div class="callout-detail">${calloutDetail}</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     THESIS PRICE LEVELS
+     Omit entire section if no thesis exists.
+     Omit individual level-block if its value is null.
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Thesis Price Levels</div>
+<div class="price-levels">
+  <div class="level-block">
+    <div class="level-label">Stop</div>
+    <div class="level-value" style="color:var(--red)">$${thesisPriceStop}</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Entry</div>
+    <div class="level-value">$${thesisPriceEntry}</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Current</div>
+    <div class="level-value current">$${currentPrice}</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Target</div>
+    <div class="level-value" style="color:var(--green)">$${thesisPriceTarget}</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VALUATION SNAPSHOT
+     Omit individual cells if their value is null.
+     Omit entire section if all four are null.
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Valuation Snapshot</div>
+<div class="valuation-row">
+  <div class="val-cell">
+    <div class="val-label">P/E (TTM)</div>
+    <div class="val-num">${peTrailing}x</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">P/E (Fwd)</div>
+    <div class="val-num">${peForward}x</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">P/S</div>
+    <div class="val-num">${priceToSales}x</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">EV/EBITDA</div>
+    <div class="val-num">${evToEbitda}x</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     THESIS ASSUMPTIONS CHECK
+     Omit entire section if no thesis or assumptionsStatus is empty.
+     Repeat <li> for each assumption in assumptionsStatus array.
+     assumptionStatus: "confirmed" / "weakened" / "untested"
+     ═══════════════════════════════════════════════════════ -->
+<div class="section-title">Thesis Assumptions Check</div>
+<ul class="assumptions-list">
+  <!-- Repeat for each assumption -->
+  <li>
+    <span class="status-dot ${assumptionStatus}"></span>
+    <span>
+      <strong style="color:#fff">${assumptionText}</strong>
+      — ${assumptionEvidence}
+    </span>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+     Variables: ${generatedTimestamp}
+     ═══════════════════════════════════════════════════════ -->
+<div class="footer">
+  Opening Bell · Generated ${generatedTimestamp} · Data: EDGAR, yFinance
+</div>
+
+</body>
+</html>

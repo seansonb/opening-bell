@@ -7,3 +7,4 @@ data/*.db
 data/users.json
 data/users_test.json
 data/watchlist.json
+test_scripts/

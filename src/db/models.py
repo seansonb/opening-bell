@@ -48,4 +48,20 @@ CREATE TABLE IF NOT EXISTS news_articles (
 );
 
 CREATE INDEX IF NOT EXISTS ix_news_symbol_published ON news_articles(symbol, published_at);
+
+CREATE TABLE IF NOT EXISTS scheduled_earnings (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    symbol             TEXT NOT NULL,
+    earnings_date      TIMESTAMPTZ NOT NULL,
+    apscheduler_job_id TEXT,
+    status             TEXT NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    result_summary     TEXT,
+    created_at         TIMESTAMPTZ DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(symbol, earnings_date)
+);
+
+CREATE INDEX IF NOT EXISTS ix_scheduled_earnings_symbol ON scheduled_earnings(symbol);
+CREATE INDEX IF NOT EXISTS ix_scheduled_earnings_status ON scheduled_earnings(status);
 """

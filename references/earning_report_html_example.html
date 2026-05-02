@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opening Bell — Earnings Report (Terminal)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface-alt: #1a2236;
+    --border: #1e2d4a;
+    --text: #c9d1d9;
+    --text-muted: #6b7a8d;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --orange: #db6d28;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .brand {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .ticker-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .company-name {
+    font-size: 15px;
+    color: var(--text-muted);
+  }
+
+  .price-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .price { font-size: 22px; color: #fff; font-weight: 700; }
+  .price-change.up { color: var(--green); }
+  .price-change.down { color: var(--red); }
+  .price-change { font-size: 14px; font-weight: 500; }
+  .volume-tag { font-size: 11px; color: var(--text-muted); }
+
+  /* Verdict Banner */
+  .verdict-banner {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--green);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    border-radius: 0 6px 6px 0;
+  }
+  .verdict-banner.weakens { border-left-color: var(--red); }
+  .verdict-banner.neutral { border-left-color: var(--text-muted); }
+  .verdict-banner.monitor { border-left-color: var(--yellow); }
+
+  .verdict-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .verdict-text {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .verdict-detail {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .conviction {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: rgba(88,166,255,0.12);
+    color: var(--accent);
+  }
+
+  /* Data Grid */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    margin-top: 28px;
+  }
+
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .data-cell {
+    background: var(--surface);
+    padding: 12px 16px;
+  }
+
+  .data-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .data-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .data-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .beat { color: var(--green); }
+  .miss { color: var(--red); }
+  .flat { color: var(--text-muted); }
+
+  /* Assumptions Check */
+  .assumptions-list {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .assumptions-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+  }
+
+  .assumptions-list li:last-child { border-bottom: none; }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-dot.confirmed { background: var(--green); }
+  .status-dot.weakened { background: var(--red); }
+  .status-dot.untested { background: var(--text-muted); }
+
+  /* Price Levels */
+  .price-levels {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .level-block {
+    flex: 1;
+    background: var(--surface);
+    padding: 12px;
+    text-align: center;
+  }
+
+  .level-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .level-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px; }
+  .level-value.current { color: var(--accent); }
+
+  /* Valuation Row */
+  .valuation-row {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .val-cell {
+    flex: 1;
+    background: var(--surface);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .val-label { font-size: 10px; color: var(--text-muted); }
+  .val-num { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; color: #fff; margin-top: 2px; }
+
+  /* Footer */
+  .footer {
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <span class="brand">Opening Bell</span>
+    <span class="date">Apr 24, 2026 · Post-Earnings</span>
+  </div>
+  <div class="ticker-header">
+    <span class="ticker">HUBS</span>
+    <span class="company-name">HubSpot, Inc. · Software — Application</span>
+  </div>
+  <div class="price-bar">
+    <span class="price">$687.42</span>
+    <span class="price-change up">+$34.20 (+5.2%) AH</span>
+    <span class="volume-tag">Vol 2.8× avg</span>
+  </div>
+</div>
+
+<!-- Thesis Verdict -->
+<div class="verdict-banner">
+  <div class="verdict-label">Thesis Verdict</div>
+  <div class="verdict-text">CONFIRMS — Revenue acceleration validates enterprise upmarket push</div>
+  <div class="verdict-detail">Enterprise deal count +38% YoY confirms land-and-expand thesis. Net revenue retention ticked up to 110%, reversing two-quarter decline. Guidance raise anchored in contracted revenue, not macro optimism.</div>
+  <span class="conviction">Conviction: HIGH</span>
+</div>
+
+<!-- Earnings vs Estimates -->
+<div class="section-title">Earnings vs. Estimates</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">EPS</div>
+    <div class="data-value">$2.18</div>
+    <div class="data-sub beat">Beat est. $1.94 (+12.4%)</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Revenue</div>
+    <div class="data-value">$698M</div>
+    <div class="data-sub beat">Beat est. $681M (+2.5%)</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">EPS YoY</div>
+    <div class="data-value beat">+28.2%</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Revenue YoY</div>
+    <div class="data-value beat">+22.1%</div>
+  </div>
+</div>
+
+<!-- Margins & Cash Flow -->
+<div class="section-title">Margins &amp; Cash Flow</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Gross Margin</div>
+    <div class="data-value">84.2%</div>
+    <div class="data-sub beat">+1.1pp QoQ</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Operating Margin</div>
+    <div class="data-value">17.8%</div>
+    <div class="data-sub beat">+2.3pp YoY</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Free Cash Flow</div>
+    <div class="data-value">$186M</div>
+    <div class="data-sub flat">$3.72/share</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Op. Leverage</div>
+    <div class="data-value beat">1.4×</div>
+    <div class="data-sub flat">Rev +22% / Opex +16%</div>
+  </div>
+</div>
+
+<!-- Guidance -->
+<div class="section-title">Forward Guidance</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Next Q Revenue</div>
+    <div class="data-value">$715–725M</div>
+    <div class="data-sub beat">vs. est. $704M</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Next Q EPS</div>
+    <div class="data-value">$2.05–2.15</div>
+    <div class="data-sub beat">vs. est. $1.98</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">FY Revenue</div>
+    <div class="data-value">$2.88–2.92B</div>
+    <div class="data-sub beat">Raised from $2.82B</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">FY EPS</div>
+    <div class="data-value">$8.40–8.70</div>
+    <div class="data-sub beat">Raised from $8.10</div>
+  </div>
+</div>
+
+<!-- Quality Signals -->
+<div class="section-title">Quality Signals</div>
+<div class="data-grid">
+  <div class="data-cell">
+    <div class="data-label">Rev Growth Trend (3Q)</div>
+    <div class="data-value">19% → 21% → 22%</div>
+    <div class="data-sub beat">Accelerating</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Share Count Δ</div>
+    <div class="data-value flat">+0.8%</div>
+    <div class="data-sub flat">Mild dilution</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Cash &amp; Equivalents</div>
+    <div class="data-value">$1.92B</div>
+  </div>
+  <div class="data-cell">
+    <div class="data-label">Total Debt</div>
+    <div class="data-value">$462M</div>
+    <div class="data-sub flat">Net cash: $1.46B</div>
+  </div>
+</div>
+
+<!-- Thesis Price Levels -->
+<div class="section-title">Thesis Price Levels</div>
+<div class="price-levels">
+  <div class="level-block">
+    <div class="level-label">Stop</div>
+    <div class="level-value" style="color:var(--red)">$520</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Entry</div>
+    <div class="level-value">$580</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Current</div>
+    <div class="level-value current">$687</div>
+  </div>
+  <div class="level-block">
+    <div class="level-label">Target</div>
+    <div class="level-value" style="color:var(--green)">$800</div>
+  </div>
+</div>
+
+<!-- Valuation Snapshot -->
+<div class="section-title">Valuation Snapshot</div>
+<div class="valuation-row">
+  <div class="val-cell">
+    <div class="val-label">P/E (TTM)</div>
+    <div class="val-num">86.2×</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">P/E (Fwd)</div>
+    <div class="val-num">79.1×</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">P/S</div>
+    <div class="val-num">11.4×</div>
+  </div>
+  <div class="val-cell">
+    <div class="val-label">EV/EBITDA</div>
+    <div class="val-num">62.8×</div>
+  </div>
+</div>
+
+<!-- Assumptions Check -->
+<div class="section-title">Thesis Assumptions Check</div>
+<ul class="assumptions-list">
+  <li>
+    <span class="status-dot confirmed"></span>
+    <span><strong style="color:#fff">Enterprise upmarket push drives ASP growth</strong> — Confirmed. Enterprise deal count +38% and ASP up 12% YoY.</span>
+  </li>
+  <li>
+    <span class="status-dot confirmed"></span>
+    <span><strong style="color:#fff">Net revenue retention stabilizes above 105%</strong> — Confirmed at 110%, reversing the downtrend.</span>
+  </li>
+  <li>
+    <span class="status-dot untested"></span>
+    <span><strong style="color:#fff">AI product suite becomes incremental revenue driver</strong> — Not yet testable. AI features still in beta, no monetization data disclosed.</span>
+  </li>
+</ul>
+
+<div class="footer">
+  Opening Bell · Generated Apr 24, 2026 06:42 AM PT · Data: yFinance, earnings transcript
+</div>
+
+</body>
+</html>

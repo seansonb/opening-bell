@@ -228,3 +228,170 @@ def save_articles(articles: list[dict], symbol: str) -> None:
                     )
     except Exception as e:
         print(f"  [db] save_articles error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# ScheduledEarnings
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ScheduledEarnings:
+    id: str
+    symbol: str
+    earnings_date: datetime
+    apscheduler_job_id: str | None
+    status: str
+    result_summary: str | None
+
+
+def get_scheduled_earnings(symbol: str, earnings_date: datetime) -> ScheduledEarnings | None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, symbol, earnings_date, apscheduler_job_id, status, result_summary
+                       FROM scheduled_earnings
+                       WHERE symbol = %s AND earnings_date = %s""",
+                    (symbol.upper(), earnings_date)
+                )
+                row = cur.fetchone()
+        if row:
+            return ScheduledEarnings(
+                id=str(row[0]), symbol=row[1], earnings_date=row[2],
+                apscheduler_job_id=row[3], status=row[4], result_summary=row[5]
+            )
+        return None
+    except Exception as e:
+        print(f"  [db] get_scheduled_earnings error: {e}")
+        return None
+
+
+def get_scheduled_earnings_by_job_id(job_id: str) -> ScheduledEarnings | None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, symbol, earnings_date, apscheduler_job_id, status, result_summary
+                       FROM scheduled_earnings
+                       WHERE apscheduler_job_id = %s""",
+                    (job_id,)
+                )
+                row = cur.fetchone()
+        if row:
+            return ScheduledEarnings(
+                id=str(row[0]), symbol=row[1], earnings_date=row[2],
+                apscheduler_job_id=row[3], status=row[4], result_summary=row[5]
+            )
+        return None
+    except Exception as e:
+        print(f"  [db] get_scheduled_earnings_by_job_id error: {e}")
+        return None
+
+
+def create_scheduled_earnings(symbol: str, earnings_date: datetime) -> ScheduledEarnings | None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO scheduled_earnings (symbol, earnings_date)
+                       VALUES (%s, %s)
+                       ON CONFLICT (symbol, earnings_date) DO NOTHING
+                       RETURNING id, symbol, earnings_date, apscheduler_job_id, status, result_summary""",
+                    (symbol.upper(), earnings_date)
+                )
+                row = cur.fetchone()
+        if row:
+            return ScheduledEarnings(
+                id=str(row[0]), symbol=row[1], earnings_date=row[2],
+                apscheduler_job_id=row[3], status=row[4], result_summary=row[5]
+            )
+        return None
+    except Exception as e:
+        print(f"  [db] create_scheduled_earnings error: {e}")
+        return None
+
+
+def update_scheduled_earnings_job_id(record_id: str, job_id: str) -> None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE scheduled_earnings
+                       SET apscheduler_job_id = %s, updated_at = NOW()
+                       WHERE id = %s""",
+                    (job_id, uuid.UUID(record_id))
+                )
+    except Exception as e:
+        print(f"  [db] update_scheduled_earnings_job_id error: {e}")
+
+
+def update_scheduled_earnings_status(
+    record_id: str, status: str, result_summary: str | None = None
+) -> None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE scheduled_earnings
+                       SET status = %s, result_summary = %s, updated_at = NOW()
+                       WHERE id = %s""",
+                    (status, result_summary, uuid.UUID(record_id))
+                )
+    except Exception as e:
+        print(f"  [db] update_scheduled_earnings_status error: {e}")
+
+
+def get_pending_scheduled_earnings_for_symbol(symbol: str) -> ScheduledEarnings | None:
+    """Return the pending scheduled_earnings row for a symbol, if any."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, symbol, earnings_date, apscheduler_job_id, status, result_summary
+                       FROM scheduled_earnings
+                       WHERE symbol = %s AND status = 'pending'
+                       ORDER BY created_at DESC LIMIT 1""",
+                    (symbol.upper(),)
+                )
+                row = cur.fetchone()
+        if row:
+            return ScheduledEarnings(
+                id=str(row[0]), symbol=row[1], earnings_date=row[2],
+                apscheduler_job_id=row[3], status=row[4], result_summary=row[5]
+            )
+        return None
+    except Exception as e:
+        print(f"  [db] get_pending_scheduled_earnings_for_symbol error: {e}")
+        return None
+
+
+def get_all_watchlist_symbols() -> list[str]:
+    """Return deduplicated list of all symbols across all user watchlists."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT DISTINCT symbol FROM watchlist ORDER BY symbol")
+                rows = cur.fetchall()
+        return [r[0] for r in rows]
+    except Exception as e:
+        print(f"  [db] get_all_watchlist_symbols error: {e}")
+        return []
+
+
+def get_users_watching_symbol(symbol: str) -> list[User]:
+    """Return all users who have a given symbol in their watchlist."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT u.user_id, u.email, u.first_name, u.last_name
+                       FROM users u
+                       JOIN watchlist w ON w.user_id = u.user_id
+                       WHERE w.symbol = %s""",
+                    (symbol.upper(),)
+                )
+                rows = cur.fetchall()
+        return [User(user_id=str(r[0]), email=r[1], first_name=r[2], last_name=r[3]) for r in rows]
+    except Exception as e:
+        print(f"  [db] get_users_watching_symbol error: {e}")
+        return []
