@@ -58,31 +58,24 @@ class EarningsReportJob(BaseScheduledJob):
     def run(self) -> str:
         from datetime import datetime, timezone, timedelta
         from data.edgar_provider import EDGARProvider
-        from db.queries import get_recent_articles, get_users_watching_symbol
-        from jobs.earnings_extractor import fetch_yfinance_snapshot, run_llm_extraction
+        from db.queries import get_recent_articles, get_users_watching_symbol, get_thesis
+        from jobs.earnings_extractor import fetch_yfinance_snapshot, run_llm_extraction, run_thesis_evaluation
         from jobs.earnings_renderer import render_earnings_report
 
         log.info(f"[earnings_report] {self.symbol}: starting")
         now = datetime.now(timezone.utc)
 
-        # Fetch data
         edgar_data = EDGARProvider().get_earnings_press_release(self.symbol)
         yf_snapshot = fetch_yfinance_snapshot(self.symbol)
         news = get_recent_articles(self.symbol, since=now - timedelta(hours=48))
 
-        # LLM extraction — only when a press release is available
-        # thesis_verdict/commentary are per-user; section is omitted until per-user rendering added
-        llm_fields = None
+        # Base extraction runs once — no thesis context, shared across all users
+        base_llm_fields = None
         if edgar_data.press_release_text:
-            llm_fields = run_llm_extraction(edgar_data, yf_snapshot, thesis=None, news=news)
+            base_llm_fields = run_llm_extraction(edgar_data, yf_snapshot, thesis=None, news=news)
         else:
             log.info(f"[earnings_report] {self.symbol}: no press release — skipping LLM")
 
-        # Render once — same HTML for all watchers (thesis section omitted when thesis=None)
-        html = render_earnings_report(self.symbol, now, edgar_data, yf_snapshot, llm_fields, news)
-        log.info(f"[earnings_report] {self.symbol}: rendered {len(html):,} chars")
-
-        # Send to all watchers
         users = get_users_watching_symbol(self.symbol)
         if not users:
             log.info(f"[earnings_report] {self.symbol}: no watchers, skipping send")
@@ -90,10 +83,22 @@ class EarningsReportJob(BaseScheduledJob):
         month = now.strftime('%B')
         subject = f"{self.symbol} Earnings — {month} {now.day}, {now.year}"
         sent = 0
+
         for user in users:
+            # Per-user: inject thesis verdict/commentary if they have a thesis for this symbol
+            user_llm_fields = base_llm_fields.copy() if base_llm_fields else None
+            thesis = get_thesis(user.id, self.symbol)
+
+            if user_llm_fields and thesis:
+                verdict, commentary = run_thesis_evaluation(edgar_data, user_llm_fields, thesis)
+                user_llm_fields['thesis_verdict'] = verdict
+                user_llm_fields['thesis_commentary'] = commentary
+
+            html = render_earnings_report(self.symbol, now, edgar_data, yf_snapshot, user_llm_fields, news)
+
             try:
                 _send_html_email(html, subject, user.email)
-                log.info(f"[earnings_report] {self.symbol}: sent to {user.email}")
+                log.info(f"[earnings_report] {self.symbol}: sent to {user.email} (thesis={'yes' if thesis else 'no'})")
                 sent += 1
             except Exception as e:
                 log.error(f"[earnings_report] {self.symbol}: send failed for {user.email} — {e}")
@@ -101,7 +106,7 @@ class EarningsReportJob(BaseScheduledJob):
         has_pr = edgar_data.press_release_text is not None
         summary = (
             f"{self.symbol}: press_release={has_pr}, "
-            f"llm={bool(llm_fields)}, "
+            f"llm={bool(base_llm_fields)}, "
             f"sent={sent}/{len(users)}"
         )
         log.info(f"[earnings_report] {summary}")

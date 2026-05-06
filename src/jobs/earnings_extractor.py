@@ -15,7 +15,8 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-_HAIKU = 'claude-haiku-4-5-20251001'
+_HAIKU   = 'claude-haiku-4-5-20251001'
+_SONNET  = 'claude-sonnet-4-6'
 
 _LIST_FIELDS = {'forward_looking_topics', 'key_highlights', 'key_risks'}
 
@@ -40,7 +41,6 @@ _ALL_LLM_FIELDS = [
     'guidance_raised',
     'management_tone',
     'forward_looking_topics', 'key_highlights', 'key_risks',
-    'thesis_verdict', 'thesis_commentary',
 ]
 
 _FIELD_DESCRIPTIONS = """\
@@ -91,9 +91,7 @@ _FIELD_DESCRIPTIONS = """\
 - management_tone: Overall tone — exactly one of: confident / cautious / mixed
 - forward_looking_topics: Array of 2-5 themes management is emphasizing this quarter
 - key_highlights: Array of 2-4 most important positive takeaways
-- key_risks: Array of 1-3 risks or concerns raised
-- thesis_verdict: How results relate to the investment thesis — exactly one of: validates / weakens / neutral / monitor
-- thesis_commentary: 2-3 sentences explaining the thesis verdict (null if no thesis provided)\
+- key_risks: Array of 1-3 risks or concerns raised\
 """
 
 _SYSTEM = (
@@ -296,9 +294,78 @@ def run_llm_extraction(edgar_data, yf_snapshot: dict, thesis, news: list[dict]) 
 
     log.info(
         f"[extractor] {symbol}: extracted — "
-        f"verdict={fields.get('thesis_verdict')}, "
         f"tone={fields.get('management_tone')}, "
         f"highlights={len(fields.get('key_highlights', []))}, "
         f"nrr={fields.get('nrr_pct')}"
     )
     return fields
+
+
+def run_thesis_evaluation(edgar_data, llm_fields: dict, thesis) -> tuple[str | None, str | None]:
+    """
+    Evaluate how this quarter's results relate to a user's specific thesis.
+    Uses Sonnet for the nuanced judgment call. Returns (verdict, commentary).
+    """
+    from llm.llm_providers import get_provider
+
+    symbol = edgar_data.symbol
+
+    lines = [f"# Thesis Evaluation — {symbol}\n"]
+
+    lines.append("## Quarter Results\n")
+    kv = [
+        ('Headline',        llm_fields.get('headline_summary')),
+        ('Revenue YoY',     f"{llm_fields['revenue_yoy_growth_pct']}%" if llm_fields.get('revenue_yoy_growth_pct') is not None else None),
+        ('Non-GAAP EPS',    llm_fields.get('eps_non_gaap')),
+        ('EPS vs estimate', f"{llm_fields['eps_beat_miss']:+.4f}" if llm_fields.get('eps_beat_miss') is not None else None),
+        ('EPS surprise',    f"{llm_fields['eps_surprise_pct']:+.1f}%" if llm_fields.get('eps_surprise_pct') is not None else None),
+        ('Guidance raised', llm_fields.get('guidance_raised')),
+        ('Management tone', llm_fields.get('management_tone')),
+    ]
+    for label, val in kv:
+        if val is not None:
+            lines.append(f"- {label}: {val}")
+    if llm_fields.get('key_highlights'):
+        lines.append(f"- Highlights: {'; '.join(llm_fields['key_highlights'])}")
+    if llm_fields.get('key_risks'):
+        lines.append(f"- Risks: {'; '.join(llm_fields['key_risks'])}")
+    lines.append("")
+
+    lines.append("## Investment Thesis\n")
+    if thesis.sector_theses:
+        lines.append("Sector theses: " + " | ".join(thesis.sector_theses))
+    if thesis.macro_theses:
+        lines.append("Macro theses: " + " | ".join(thesis.macro_theses))
+    if thesis.body:
+        lines.append(thesis.body[:2500])
+    lines.append("")
+
+    lines.append(
+        "Evaluate how this quarter's results relate to the investment thesis above.\n\n"
+        "Return only a JSON object:\n"
+        '{"verdict": "validates" | "weakens" | "neutral" | "monitor", '
+        '"commentary": "2-3 sentences explaining the verdict"}\n\n'
+        "verdict definitions:\n"
+        "- validates: results clearly support a key thesis assumption\n"
+        "- weakens: results clearly contradict a key thesis assumption\n"
+        "- monitor: mixed signals — thesis is neither confirmed nor broken, but warrants watching\n"
+        "- neutral: results are not meaningfully related to the thesis\n\n"
+        "No preamble, no markdown."
+    )
+
+    prompt = "\n".join(lines)
+
+    try:
+        provider = get_provider('claude', model=_SONNET)
+        raw = provider.generate(prompt, max_tokens=400).strip()
+        if raw.startswith('```'):
+            raw = re.sub(r'^```[a-z]*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw).strip()
+        data = json.loads(raw)
+        verdict = data.get('verdict')
+        commentary = data.get('commentary')
+        log.info(f"[extractor] {symbol}: thesis verdict={verdict}")
+        return verdict, commentary
+    except Exception as e:
+        log.error(f"[extractor] {symbol}: thesis evaluation failed — {e}")
+        return None, None
