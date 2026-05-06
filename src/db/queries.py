@@ -365,6 +365,43 @@ def get_pending_scheduled_earnings_for_symbol(symbol: str) -> ScheduledEarnings 
         return None
 
 
+def update_scheduled_earnings_date(record_id: str, new_date: datetime) -> None:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE scheduled_earnings
+                       SET earnings_date = %s, updated_at = NOW()
+                       WHERE id = %s""",
+                    (new_date, uuid.UUID(record_id))
+                )
+    except Exception as e:
+        print(f"  [db] update_scheduled_earnings_date error: {e}")
+
+
+def get_pending_earnings_on_or_before_today() -> list[ScheduledEarnings]:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, symbol, earnings_date, apscheduler_job_id, status, result_summary
+                       FROM scheduled_earnings
+                       WHERE status = 'pending' AND earnings_date::date <= CURRENT_DATE
+                       ORDER BY earnings_date ASC"""
+                )
+                rows = cur.fetchall()
+        return [
+            ScheduledEarnings(
+                id=str(r[0]), symbol=r[1], earnings_date=r[2],
+                apscheduler_job_id=r[3], status=r[4], result_summary=r[5]
+            )
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"  [db] get_pending_earnings_on_or_before_today error: {e}")
+        return []
+
+
 def get_all_watchlist_symbols() -> list[str]:
     """Return deduplicated list of all symbols across all user watchlists."""
     try:

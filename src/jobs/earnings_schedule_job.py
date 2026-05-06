@@ -1,18 +1,16 @@
 """
 EarningsScheduleJob — runs weekly (Sunday 08:00 UTC) to discover upcoming
-earnings dates for all watchlist symbols and schedule EarningsReportJob instances.
+earnings dates for all watchlist symbols and create/update scheduled_earnings rows.
+The hourly EarningsPollJob is responsible for actually firing reports.
 """
 
 import logging
 import time
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from jobs.base_job import BaseScheduledJob
 
 log = logging.getLogger(__name__)
-
-_EASTERN = ZoneInfo('America/New_York')
 
 
 def trigger() -> None:
@@ -28,10 +26,9 @@ class EarningsScheduleJob(BaseScheduledJob):
             get_scheduled_earnings,
             get_pending_scheduled_earnings_for_symbol,
             create_scheduled_earnings,
-            update_scheduled_earnings_job_id,
+            update_scheduled_earnings_date,
         )
         from data.edgar_provider import EDGARProvider
-        from jobs.earnings_report_job import trigger as report_trigger
 
         edgar = EDGARProvider()
         symbols = get_all_watchlist_symbols()
@@ -47,20 +44,15 @@ class EarningsScheduleJob(BaseScheduledJob):
                 continue
 
             normalized = _normalize(next_date)
-
-            # Check for an existing pending row for this symbol (any date)
             existing = get_pending_scheduled_earnings_for_symbol(symbol)
 
             if existing:
                 if existing.earnings_date.date() == normalized.date():
                     skipped_count += 1
                     continue
-                # Company rescheduled — update the existing row and job
-                run_at = _run_at(normalized)
-                job_id = _job_id(symbol, normalized)
-                _schedule_apscheduler_job(report_trigger, job_id, run_at, symbol, existing.id)
-                update_scheduled_earnings_job_id(existing.id, job_id)
-                log.info(f"[schedule] {symbol}: rescheduled to {run_at.isoformat()}")
+                # Company rescheduled — update the date so the poll job picks it up correctly
+                update_scheduled_earnings_date(existing.id, normalized)
+                log.info(f"[schedule] {symbol}: rescheduled to {normalized.date()}")
                 updated_count += 1
                 continue
 
@@ -73,11 +65,7 @@ class EarningsScheduleJob(BaseScheduledJob):
             if record is None:
                 continue
 
-            run_at = _run_at(normalized)
-            job_id = _job_id(symbol, normalized)
-            _schedule_apscheduler_job(report_trigger, job_id, run_at, symbol, record.id)
-            update_scheduled_earnings_job_id(record.id, job_id)
-            log.info(f"[schedule] {symbol}: scheduled for {run_at.isoformat()}")
+            log.info(f"[schedule] {symbol}: registered for {normalized.date()}")
             new_count += 1
 
         summary = (
@@ -91,27 +79,3 @@ class EarningsScheduleJob(BaseScheduledJob):
 def _normalize(dt: datetime) -> datetime:
     """Normalize an earnings datetime to midnight UTC (stable unique key)."""
     return dt.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
-
-
-def _run_at(earnings_date_utc: datetime) -> datetime:
-    """Return 4:00 PM ET on the earnings date."""
-    d = earnings_date_utc.astimezone(_EASTERN).date()
-    return datetime(d.year, d.month, d.day, 16, 0, 0, tzinfo=_EASTERN)
-
-
-def _job_id(symbol: str, earnings_date_utc: datetime) -> str:
-    return f"earnings_report_{symbol}_{earnings_date_utc.strftime('%Y%m%d')}"
-
-
-def _schedule_apscheduler_job(
-    func, job_id: str, run_at: datetime, symbol: str, record_id: str
-) -> None:
-    from scheduler import scheduler
-    scheduler.add_job(
-        func,
-        trigger='date',
-        run_date=run_at,
-        id=job_id,
-        kwargs={'symbol': symbol, 'record_id': record_id},
-        replace_existing=True,
-    )

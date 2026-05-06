@@ -31,6 +31,8 @@ scheduler = BlockingScheduler(jobstores=jobstores, timezone='America/New_York')
 
 def _register_static_jobs() -> None:
     from jobs.earnings_schedule_job import trigger as earnings_schedule_trigger
+    from jobs.earnings_poll_job import trigger as earnings_poll_trigger
+
     scheduler.add_job(
         earnings_schedule_trigger,
         trigger='cron',
@@ -41,6 +43,15 @@ def _register_static_jobs() -> None:
         replace_existing=True,
     )
     log.info('Registered weekly earnings schedule job (Sun 08:00 UTC)')
+
+    scheduler.add_job(
+        earnings_poll_trigger,
+        trigger='cron',
+        minute=0,
+        id='earnings_poll_hourly',
+        replace_existing=True,
+    )
+    log.info('Registered hourly earnings poll job')
 
 
 if __name__ == '__main__':

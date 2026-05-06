@@ -136,7 +136,7 @@ def _build_context(
             'non_gaap': f.get('eps_non_gaap'),
             'estimate': f.get('eps_estimate'),
             'beat_miss': f.get('eps_beat_miss'),
-            'surprise_pct': yf_snapshot.get('eps_surprise_pct'),
+            'surprise_pct': f.get('eps_surprise_pct') if f.get('eps_surprise_pct') is not None else yf_snapshot.get('eps_surprise_pct'),
             'gaap_yoy_pct': _pct_change(f.get('eps_gaap'), f.get('eps_gaap_prior_year')),
             'non_gaap_yoy_pct': _pct_change(f.get('eps_non_gaap'), f.get('eps_non_gaap_prior_year')),
         }

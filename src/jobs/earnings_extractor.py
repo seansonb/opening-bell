@@ -286,6 +286,13 @@ def run_llm_extraction(edgar_data, yf_snapshot: dict, thesis, news: list[dict]) 
         if eps_estimate is not None and eps_reported is not None
         else None
     )
+    yf_surprise = yf_snapshot.get('eps_surprise_pct')
+    if yf_surprise is not None:
+        fields['eps_surprise_pct'] = yf_surprise
+    elif eps_estimate is not None and eps_reported is not None and eps_estimate != 0:
+        fields['eps_surprise_pct'] = round((eps_reported - eps_estimate) / abs(eps_estimate) * 100, 2)
+    else:
+        fields['eps_surprise_pct'] = None
 
     log.info(
         f"[extractor] {symbol}: extracted — "
