@@ -1,6 +1,6 @@
 """
 Opening Bell Scheduler — APScheduler process hosted on Railway.
-Manages dynamic earnings notification jobs backed by Neon.
+Static cron jobs only — all earnings state lives in the scheduled_earnings table in Neon.
 """
 
 import logging
@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from sqlalchemy.pool import NullPool
 
 load_dotenv()
 
@@ -23,7 +24,12 @@ if not DATABASE_URL:
     raise RuntimeError('DATABASE_URL is not set')
 
 jobstores = {
-    'default': SQLAlchemyJobStore(url=DATABASE_URL)
+    'default': SQLAlchemyJobStore(
+        url=DATABASE_URL,
+        engine_options={
+            'poolclass': NullPool,
+        }
+    )
 }
 
 scheduler = BlockingScheduler(jobstores=jobstores, timezone='America/New_York')
@@ -42,7 +48,7 @@ def _register_static_jobs() -> None:
         id='earnings_schedule_weekly',
         replace_existing=True,
     )
-    log.info('Registered weekly earnings schedule job (Sun 08:00 UTC)')
+    log.info('Registered weekly earnings schedule job (Sun 08:00 ET)')
 
     scheduler.add_job(
         earnings_poll_trigger,

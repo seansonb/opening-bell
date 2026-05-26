@@ -54,7 +54,7 @@ class EarningsPollJob(BaseScheduledJob):
 
             log.info(f'[poll] {record.symbol}: press release available — firing report')
             try:
-                EarningsReportJob(job_id=record.id, symbol=record.symbol).execute()
+                EarningsReportJob(job_id=record.id, symbol=record.symbol, edgar_data=edgar_data).execute()
                 fired += 1
             except Exception as e:
                 log.error(f'[poll] {record.symbol}: report job failed — {e}')

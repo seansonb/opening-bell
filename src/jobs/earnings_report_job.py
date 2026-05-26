@@ -40,10 +40,11 @@ def trigger(symbol: str, record_id: str) -> None:
 
 class EarningsReportJob(BaseScheduledJob):
 
-    def __init__(self, job_id: str, symbol: str):
+    def __init__(self, job_id: str, symbol: str, edgar_data=None):
         super().__init__(job_id)
         self.symbol = symbol
         self.record_id = job_id  # job_id IS the scheduled_earnings UUID
+        self._prefetched_edgar_data = edgar_data
 
     def _before_run(self):
         update_scheduled_earnings_status(self.record_id, 'running')
@@ -65,7 +66,7 @@ class EarningsReportJob(BaseScheduledJob):
         log.info(f"[earnings_report] {self.symbol}: starting")
         now = datetime.now(timezone.utc)
 
-        edgar_data = EDGARProvider().get_earnings_press_release(self.symbol)
+        edgar_data = self._prefetched_edgar_data or EDGARProvider().get_earnings_press_release(self.symbol)
         yf_snapshot = fetch_yfinance_snapshot(self.symbol)
         news = get_recent_articles(self.symbol, since=now - timedelta(hours=48))
 
